@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>7/11 DES Simulation</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="intro-active">
+    <section class="intro-screen" id="intro-screen" aria-label="Store preview">
+      <div class="landing-copy">
+        <img class="landing-logo" src="img/711.png" alt="7-Eleven" />
+        <small>Discrete Event Simulation</small>
+        <p>
+          <strong>Objective</strong>
+          Manage the store, serve customers, and open the 2nd cashier at the right time to reduce long queues and keep customers satisfied.
+        </p>
+        <button id="start-simulation" class="enter-store-button" type="button">Enter Store</button>
+      </div>
+      <img class="landing-store" src="img/store2.png" alt="7/11 convenience store storefront" />
+      <button id="view-results" class="intro-hidden-action" type="button" aria-label="View Simulation Results"></button>
+      <button id="exit-intro" class="intro-hidden-action" type="button" aria-label="Exit"></button>
+    </section>
+
+    <main class="app-shell app-hidden" id="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Discrete Event Simulation</p>
+          <h1>7/11 Convenience Store Queue Simulator</h1>
+        </div>
+        <div class="clock-panel">
+          <span>Sim Time</span>
+          <strong id="sim-time">00:00</strong>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <aside class="controls" aria-label="Simulation controls">
+          <div class="control-row">
+            <button id="toggle-run" class="primary-button" type="button">Pause</button>
+            <button id="reset" type="button">Reset</button>
+            <button id="rush" type="button">Rush</button>
+          </div>
+
+          <label>
+            Arrival pace
+            <input id="arrival-rate" type="range" min="35" max="140" value="80" />
+          </label>
+
+          <label>
+            POS 1 queue trigger
+            <input id="open-threshold" type="number" min="2" max="12" value="5" />
+          </label>
+
+          <label>
+            POS 1 wait trigger
+            <input id="wait-threshold" type="number" min="1" max="8" value="3" />
+          </label>
+
+          <label>
+            Simulation speed
+            <input id="speed" type="range" min="1" max="12" value="6" />
+          </label>
+        </aside>
+
+        <section class="store-wrap" aria-label="Animated 7/11 store">
+          <div class="store" id="store">
+            <div class="zone entry">
+              <span>Door</span>
+              <div class="door">
+                <i class="door-panel door-left"></i>
+                <i class="door-panel door-right"></i>
+              </div>
+            </div>
+
+            <div class="shelf shelf-a">
+              <span>Snacks</span>
+              <img src="assets/shelf-items.svg" alt="" />
+            </div>
+
+            <div class="shelf shelf-b">
+              <span>Meals</span>
+              <img src="assets/shelf-items.svg" alt="" />
+            </div>
+
+            <div class="shelf shelf-c">
+              <span>Pantry</span>
+              <img src="assets/shelf-items.svg" alt="" />
+            </div>
+
+            <div class="shelf shelf-d">
+              <span>Offers</span>
+              <img src="assets/shelf-items.svg" alt="" />
+            </div>
+
+            <div class="fridge fridge-a">
+              <span>Cold Food</span>
+              <img src="assets/fridge-items.svg" alt="" />
+            </div>
+
+            <div class="fridge fridge-b">
+              <span>Fridge</span>
+              <img src="assets/fridge-items.svg" alt="" />
+            </div>
+
+            <div class="staff staff-stock" id="floating-staff">
+              <img class="staff-sprite" id="floating-staff-img" src="img/staff/restock1.png" alt="" />
+            </div>
+
+            <img class="stock-box" src="img/staff/box.png" alt="" />
+
+            <div class="pos pos-one open" id="pos1">
+              <span>POS 1</span>
+              <strong id="pos1-status">OPEN</strong>
+              <img class="pos-register pos-one-register" src="img/staff/cashier1.png" alt="" />
+              <div id="service-1" class="service-spot"></div>
+            </div>
+
+            <div class="pos pos-two" id="pos2">
+              <span>POS 2</span>
+              <strong id="pos2-status">CLOSED</strong>
+              <img class="pos-register pos-two-register" id="pos2-img" src="img/staff/pos2.png" alt="" />
+              <div id="service-2" class="service-spot"></div>
+            </div>
+
+            <div class="queue-line queue-one">
+              <span>Queue 1</span>
+              <div id="queue-1" class="queue-slots"></div>
+            </div>
+
+            <div class="queue-line queue-two">
+              <span>Queue 2</span>
+              <div id="queue-2" class="queue-slots"></div>
+            </div>
+
+            <div id="customers" class="customers"></div>
+          </div>
+        </section>
+
+        <aside class="metrics" aria-label="Simulation metrics">
+          <h2>Metrics</h2>
+          <dl>
+            <div><dt>Queue 1</dt><dd id="metric-q1">0</dd></div>
+            <div><dt>Queue 2</dt><dd id="metric-q2">0</dd></div>
+            <div><dt>Avg Wait</dt><dd id="metric-wait">0.0m</dd></div>
+            <div><dt>Served</dt><dd id="metric-served">0</dd></div>
+            <div><dt>Upset</dt><dd id="metric-upset">0</dd></div>
+            <div><dt>POS 2 Opened</dt><dd id="metric-pos2">Never</dd></div>
+          </dl>
+
+          <h2>Event Log</h2>
+          <ol id="event-log" class="event-log"></ol>
+        </aside>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
