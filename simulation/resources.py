@@ -1,8 +1,10 @@
 """Resource and queue-management layer."""
 
+from __future__ import annotations
+
 import simpy
 
-from simulation import config
+from simulation.config import DEFAULT_CONFIG, SimulationConfig
 
 
 class TrackedResource(simpy.Resource):
@@ -13,91 +15,150 @@ class TrackedResource(simpy.Resource):
         return request
 
 
-def create_store(env):
+def create_store(env, sim_config: SimulationConfig = DEFAULT_CONFIG):
+    pos_lanes = [
+        TrackedResource(env, capacity=1)
+        for _ in range(sim_config.pos_lanes)
+    ]
+    open_lanes = [
+        lane_index < sim_config.initial_active_cashiers
+        for lane_index in range(sim_config.pos_lanes)
+    ]
     return {
-        "pos1": TrackedResource(env, capacity=1),
-        "pos2": TrackedResource(env, capacity=1),
-        "pos2_open": False,
+        "config": sim_config,
+        "pos_lanes": pos_lanes,
+        "open_lanes": open_lanes,
         "waiting_since": {},
     }
 
 
-def choose_cashier(store):
-    if not store["pos2_open"]:
-        return store["pos1"]
-
-    if len(store["pos1"].queue) <= len(store["pos2"].queue):
-        return store["pos1"]
-
-    return store["pos2"]
-
-
-def queue_length(store):
-    if not store["pos2_open"]:
-        return len(store["pos1"].queue)
-
-    return len(store["pos1"].queue) + len(store["pos2"].queue)
-
-
-def pos1_queue_length(store):
-    return len(store["pos1"].queue)
-
-
-def queued_customer_ids(store):
-    active_ids = [request.customer_id for request in store["pos1"].queue]
-
-    if store["pos2_open"]:
-        active_ids += [request.customer_id for request in store["pos2"].queue]
-
-    return active_ids
-
-
-def average_queue_wait(env, store, pos="all"):
-    waiting_since = store["waiting_since"]
-    if pos == "pos1":
-        active_ids = [request.customer_id for request in store["pos1"].queue]
-    else:
-        active_ids = queued_customer_ids(store)
-
-    waits = [
-        env.now - waiting_since[customer_id]
-        for customer_id in active_ids
-        if waiting_since.get(customer_id) is not None
+def active_lane_indexes(store) -> list[int]:
+    return [
+        index
+        for index, open_lane in enumerate(store["open_lanes"])
+        if open_lane
     ]
 
+
+def choose_cashier(store):
+    active_indexes = active_lane_indexes(store)
+    if not active_indexes:
+        store["open_lanes"][0] = True
+        active_indexes = [0]
+
+    best_index = min(active_indexes, key=lambda index: len(store["pos_lanes"][index].queue))
+    return store["pos_lanes"][best_index]
+
+
+def queue_length(store) -> int:
+    return sum(
+        len(store["pos_lanes"][index].queue)
+        for index in active_lane_indexes(store)
+    )
+
+
+def pos1_checkout_load(store) -> int:
+    pos1 = store["pos_lanes"][0]
+    return len(pos1.queue) + pos1.count
+
+
+def busy_cashiers(store) -> int:
+    return sum(lane.count for lane in store["pos_lanes"])
+
+
+def active_cashiers(store) -> int:
+    return len(active_lane_indexes(store))
+
+
+def queued_customer_ids(store, lane_index: int | None = None) -> list[str]:
+    if lane_index is not None:
+        return [request.customer_id for request in store["pos_lanes"][lane_index].queue]
+
+    customer_ids = []
+    for index in active_lane_indexes(store):
+        customer_ids.extend(request.customer_id for request in store["pos_lanes"][index].queue)
+    return customer_ids
+
+
+def average_queue_wait(env, store, lane_index: int | None = None) -> float:
+    waiting_since = store["waiting_since"]
+    waits = [
+        env.now - waiting_since[customer_id]
+        for customer_id in queued_customer_ids(store, lane_index)
+        if waiting_since.get(customer_id) is not None
+    ]
     return sum(waits) / len(waits) if waits else 0
 
 
-def maybe_open_pos2(env, store, metrics, reason="queue rule"):
-    queue1_length = pos1_queue_length(store)
-    queue1_average_wait = average_queue_wait(env, store, "pos1")
+def is_peak_time(now: float, sim_config: SimulationConfig = DEFAULT_CONFIG) -> bool:
+    if not sim_config.peak_enabled:
+        return False
 
-    if store["pos2_open"]:
+    now = now % (24 * 60 * 60)
+    return any(
+        window_contains(now, window)
+        for window in (
+            sim_config.morning_peak,
+            sim_config.evening_peak,
+            sim_config.night_peak,
+        )
+    )
+
+
+def is_night_shift(now: float, sim_config: SimulationConfig = DEFAULT_CONFIG) -> bool:
+    return window_contains(now % (24 * 60 * 60), sim_config.night_shift)
+
+
+def window_contains(now: float, window: tuple[float, float]) -> bool:
+    start, end = window
+    if start <= end:
+        return start <= now < end
+    return now >= start or now < end
+
+
+def current_arrival_rate(now: float, sim_config: SimulationConfig = DEFAULT_CONFIG) -> float:
+    return sim_config.peak_arrival_rate if is_peak_time(now, sim_config) else sim_config.arrival_rate
+
+
+def maybe_open_pos2(env, store, metrics, reason: str = "queue rule") -> None:
+    sim_config = store["config"]
+    if sim_config.pos_lanes < 2 or store["open_lanes"][1]:
         return
 
-    if queue1_length >= config.POS2_QUEUE_TRIGGER or queue1_average_wait >= config.POS2_WAIT_TRIGGER:
-        store["pos2_open"] = True
+    queue_pressure = pos1_checkout_load(store) >= sim_config.queue_open_threshold
+    wait_pressure = average_queue_wait(env, store, 0) >= sim_config.wait_open_threshold
 
+    if queue_pressure or wait_pressure:
+        store["open_lanes"][1] = True
+        metrics.pos2_activation_count += 1
         if metrics.pos2_opened_at is None:
             metrics.pos2_opened_at = env.now
+        metrics.log_event(env.now, f"POS 2 opens ({reason})")
 
-        print(f"POS 2: Opens at time {env.now:.2f} ({reason})")
 
-
-def maybe_close_pos2(env, store):
-    if not store["pos2_open"]:
+def maybe_close_pos2(env, store, metrics) -> None:
+    sim_config = store["config"]
+    if sim_config.pos_lanes < 2 or not store["open_lanes"][1]:
         return
 
-    if len(store["pos2"].queue) > 0 or store["pos2"].count > 0:
+    pos2 = store["pos_lanes"][1]
+    if pos2.queue or pos2.count:
         return
 
-    if queue_length(store) <= config.POS2_CLOSE_QUEUE and average_queue_wait(env, store) < config.POS2_CLOSE_WAIT:
-        store["pos2_open"] = False
-        print(f"POS 2: Closes at time {env.now:.2f}")
+    demand_recovered = (
+        queue_length(store) <= sim_config.queue_close_threshold
+        and average_queue_wait(env, store) < sim_config.wait_close_threshold
+    )
+    if demand_recovered:
+        store["open_lanes"][1] = False
+        metrics.log_event(env.now, "POS 2 closes; Staff 2 returns to utility work")
 
 
 def pos2_monitor(env, store, metrics):
+    sim_config = store["config"]
     while True:
-        yield env.timeout(config.POS2_CHECK_INTERVAL)
-        maybe_open_pos2(env, store, metrics, "POS 1 queue length >= 5 or POS 1 average wait >= 3 minutes")
-        maybe_close_pos2(env, store)
+        yield env.timeout(sim_config.pos_monitor_interval)
+        metrics.record_queue_length(env.now, queue_length(store))
+        metrics.record_cashiers(env.now, busy_cashiers(store), active_cashiers(store))
+        maybe_open_pos2(env, store, metrics, "POS 1 queue reached threshold")
+        maybe_close_pos2(env, store, metrics)
