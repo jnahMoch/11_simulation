@@ -118,9 +118,6 @@ def summary_payload(metrics, config: SimulationConfig) -> dict[str, object]:
 
 
 def peak_rate_for(arrival_mean: float, surge_multiplier: float) -> float:
-    default_arrival_mean = 1 / DEFAULT_CONFIG.arrival_rate
-    if arrival_mean == default_arrival_mean:
-        return 1 / max(1, default_arrival_mean / max(1, surge_multiplier))
     return 1 / max(1, arrival_mean / max(1, surge_multiplier))
 
 

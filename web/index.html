@@ -3,156 +3,303 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>7/11 DES Simulation</title>
+    <title>7/11 SIMULATION | Discrete-Event Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body class="intro-active">
-    <section class="intro-screen" id="intro-screen" aria-label="Store preview">
-      <div class="landing-copy">
-        <img class="landing-logo" src="img/711.png" alt="7-Eleven" />
-        <small>Discrete Event Simulation</small>
-        <p>
-          <strong>Objective</strong>
-          Manage the store, serve customers, and open the 2nd cashier at the right time to reduce long queues and keep customers satisfied.
-        </p>
-        <button id="start-simulation" class="enter-store-button" type="button">Enter Store</button>
-      </div>
-      <img class="landing-store" src="img/store2.png" alt="7/11 convenience store storefront" />
-      <button id="view-results" class="intro-hidden-action" type="button" aria-label="View Simulation Results"></button>
-      <button id="exit-intro" class="intro-hidden-action" type="button" aria-label="Exit"></button>
-    </section>
-
-    <main class="app-shell app-hidden" id="app-shell">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">Discrete Event Simulation</p>
-          <h1>7/11 Convenience Store Queue Simulator</h1>
-        </div>
-        <div class="clock-panel">
-          <span>Sim Time</span>
-          <strong id="sim-time">00:00</strong>
-        </div>
-      </header>
-
-      <section class="workspace">
-        <aside class="controls" aria-label="Simulation controls">
-          <div class="control-row">
-            <button id="toggle-run" class="primary-button" type="button">Pause</button>
-            <button id="reset" type="button">Reset</button>
-            <button id="rush" type="button">Rush</button>
+  <body>
+    <div class="dashboard-wrapper">
+      <!-- Sidebar Navigation & Controls -->
+      <aside class="sidebar" aria-label="Simulation Controls">
+        <header class="sidebar-header">
+          <div class="brand">
+            <span class="status-dot"></span>
+            <h1>7/11 SIMULATION</h1>
           </div>
+          <p class="subtitle">DISCRETE-EVENT SIMULATOR V5.0</p>
+        </header>
 
-          <label>
-            Arrival pace
-            <input id="arrival-rate" type="range" min="35" max="140" value="80" />
-          </label>
+        <nav class="controls-nav">
+          <section class="control-group">
+            <h3>OPERATIONAL WINDOW</h3>
+            <label>
+              <div class="label-header">
+                <span>Operating Hours</span>
+                <span class="value" id="hours-val">24.0h</span>
+              </div>
+              <input id="hours-input" type="range" min="1" max="24" value="24" step="0.5" />
+            </label>
+            <label>
+              <div class="label-header">
+                <span>Avg Time Between Arrivals</span>
+                <span class="value" id="arrival-val">2.5m</span>
+              </div>
+              <input id="arrival-rate" type="range" min="30" max="300" value="150" />
+            </label>
+          </section>
 
-          <label>
-            POS 1 queue trigger
-            <input id="open-threshold" type="number" min="2" max="12" value="5" />
-          </label>
-
-          <label>
-            POS 1 wait trigger
-            <input id="wait-threshold" type="number" min="1" max="8" value="3" />
-          </label>
-
-          <label>
-            Simulation speed
-            <input id="speed" type="range" min="1" max="12" value="6" />
-          </label>
-        </aside>
-
-        <section class="store-wrap" aria-label="Animated 7/11 store">
-          <div class="store" id="store">
-            <div class="zone entry">
-              <span>Door</span>
-              <div class="door">
-                <i class="door-panel door-left"></i>
-                <i class="door-panel door-right"></i>
+          <section class="control-group">
+            <h3>CASHIER CONFIGURATION</h3>
+            <div class="cashier-control-card">
+              <div class="stepper-wrap">
+                <span class="label">CASHIERS</span>
+                <div class="stepper">
+                  <button type="button" id="dec-cashiers">-</button>
+                  <span id="cashier-count">01</span>
+                  <button type="button" id="inc-cashiers">+</button>
+                </div>
+              </div>
+              <div class="total-stations">
+                <span class="label">TOTAL POS</span>
+                <span class="value">02</span>
               </div>
             </div>
 
-            <div class="shelf shelf-a">
-              <span>Snacks</span>
-              <img src="assets/shelf-items.svg" alt="" />
+            <div class="dual-row">
+              <label>
+                <div class="label-header"><span>Service Min</span><span class="value" id="service-min-val">1.0m</span></div>
+                <input id="service-min-input" type="range" min="30" max="300" value="60" step="30" />
+              </label>
+              <label>
+                <div class="label-header"><span>Service Max</span><span class="value" id="service-max-val">5.0m</span></div>
+                <input id="service-max-input" type="range" min="60" max="600" value="300" step="30" />
+              </label>
             </div>
-
-            <div class="shelf shelf-b">
-              <span>Meals</span>
-              <img src="assets/shelf-items.svg" alt="" />
+            <div class="dual-row">
+              <label>
+                <div class="label-header"><span>Shop Min</span><span class="value" id="shop-min-val">1.0m</span></div>
+                <input id="shop-min-input" type="range" min="30" max="300" value="60" step="30" />
+              </label>
+              <label>
+                <div class="label-header"><span>Shop Max</span><span class="value" id="shop-max-val">4.0m</span></div>
+                <input id="shop-max-input" type="range" min="60" max="900" value="240" step="30" />
+              </label>
             </div>
+          </section>
 
-            <div class="shelf shelf-c">
-              <span>Pantry</span>
-              <img src="assets/shelf-items.svg" alt="" />
+          <section class="control-group">
+            <div class="toggle-row">
+              <h3>PEAK SURGE ENGINE</h3>
+              <button class="toggle active" id="peak-toggle" aria-pressed="true"></button>
             </div>
+            <label>
+              <div class="label-header">
+                <span>Intensity Multiplier</span>
+                <span class="value accent">2.0x</span>
+              </div>
+              <input id="surge-input" type="range" min="1" max="5" value="2" step="0.1" />
+            </label>
+          </section>
 
-            <div class="shelf shelf-d">
-              <span>Offers</span>
-              <img src="assets/shelf-items.svg" alt="" />
+          <section class="control-group">
+            <h3>RANDOM SEED</h3>
+            <div class="seed-input-wrap">
+              <input type="text" value="42" id="seed-input" />
+              <button type="button" class="icon-button" id="randomize-seed">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78-7.78 5.5 5.5 0 0 1 7.78 7.78zM12 12l9 9m-9-9l-9 9m9-9l9-9"></path></svg>
+              </button>
             </div>
+          </section>
+        </nav>
 
-            <div class="fridge fridge-a">
-              <span>Cold Food</span>
-              <img src="assets/fridge-items.svg" alt="" />
+        <footer class="sidebar-footer">
+          <button id="toggle-run" class="run-button">RUN SIMULATION <span aria-hidden="true">+</span></button>
+          <button id="reset" class="reset-link">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M3 21v-5h5"></path></svg>
+            RESET PARAMETERS
+          </button>
+        </footer>
+      </aside>
+
+      <!-- Main Dashboard Content -->
+      <main class="main-content">
+        <!-- Top Metrics Bar -->
+        <header class="metrics-bar">
+          <div class="metric-card">
+            <span class="label">AVG WAIT TIME</span>
+            <div class="value-row">
+              <strong id="metric-wait">00:00</strong>
+              <small>MAX <span id="max-wait">00:00</span></small>
             </div>
-
-            <div class="fridge fridge-b">
-              <span>Fridge</span>
-              <img src="assets/fridge-items.svg" alt="" />
+          </div>
+          <div class="metric-divider"></div>
+          <div class="metric-card">
+            <span class="label">QUEUE LENGTH</span>
+            <div class="value-row">
+              <strong id="metric-qlen">0.0</strong>
+              <span class="status-tag positive" id="q-status">STABLE</span>
             </div>
-
-            <div class="staff staff-stock" id="floating-staff">
-              <img class="staff-sprite" id="floating-staff-img" src="img/staff/restock1.png" alt="" />
+          </div>
+          <div class="metric-divider"></div>
+          <div class="metric-card">
+            <span class="label">UTILIZATION</span>
+            <div class="value-row">
+              <strong id="metric-util">0%</strong>
+              <span class="status-tag neutral" id="util-status">IDLE</span>
             </div>
-
-            <img class="stock-box" src="img/staff/box.png" alt="" />
-
-            <div class="pos pos-one open" id="pos1">
-              <span>POS 1</span>
-              <strong id="pos1-status">OPEN</strong>
-              <img class="pos-register pos-one-register" src="img/staff/cashier1.png" alt="" />
-              <div id="service-1" class="service-spot"></div>
+          </div>
+          <div class="metric-divider"></div>
+          <div class="metric-card">
+            <span class="label">SERVED</span>
+            <div class="value-row">
+              <strong id="metric-served">0</strong>
+              <small><span id="metric-arrived">0</span> ARRIVED</small>
             </div>
+          </div>
+        </header>
 
-            <div class="pos pos-two" id="pos2">
-              <span>POS 2</span>
-              <strong id="pos2-status">CLOSED</strong>
-              <img class="pos-register pos-two-register" id="pos2-img" src="img/staff/pos2.png" alt="" />
-              <div id="service-2" class="service-spot"></div>
+        <!-- Simulation Viewport -->
+        <section class="simulation-view">
+          <div class="viewport-header">
+            <div class="time-control">
+              <span class="clock-icon"></span>
+              <strong id="sim-time">00:00</strong>
             </div>
-
-            <div class="queue-line queue-one">
-              <span>Queue 1</span>
-              <div id="queue-1" class="queue-slots"></div>
+            <div class="playback-controls">
+              <button class="icon-button" id="btn-play">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              </button>
+              <div class="speed-selector">
+                <button data-speed="1">1x</button>
+                <button class="active" data-speed="2">2x</button>
+                <button data-speed="6">6x</button>
+                <button data-speed="20">20x</button>
+              </div>
             </div>
-
-            <div class="queue-line queue-two">
-              <span>Queue 2</span>
-              <div id="queue-2" class="queue-slots"></div>
+            <div class="surge-badge red" id="surge-alert" style="display: none;">
+              <span class="dot"></span>
+              SURGE <span id="surge-val-badge">2.0</span>x ACTIVE
             </div>
+          </div>
 
-            <div id="customers" class="customers"></div>
+          <div class="store-canvas-wrap">
+            <div class="store-canvas" id="store-floor">
+              <!-- Indicators for entry/POS activity -->
+              <div class="schematic-entry">ENTRY</div>
+
+              <div class="store-fixtures shelf-row" aria-hidden="true">
+                <div class="fixture shelf-fixture" data-area="shelf-snacks">
+                  <span class="fixture-type">SHELF</span>
+                  <strong>SNACKS</strong>
+                </div>
+                <div class="fixture shelf-fixture" data-area="shelf-drinks">
+                  <span class="fixture-type">SHELF</span>
+                  <strong>DRINKS</strong>
+                </div>
+                <div class="fixture shelf-fixture" data-area="shelf-instant">
+                  <span class="fixture-type">SHELF</span>
+                  <strong>INSTANT</strong>
+                </div>
+                <div class="fixture shelf-fixture" data-area="shelf-candy">
+                  <span class="fixture-type">SHELF</span>
+                  <strong>CANDY</strong>
+                </div>
+                <div class="fixture shelf-fixture" data-area="shelf-bakery">
+                  <span class="fixture-type">SHELF</span>
+                  <strong>BAKERY</strong>
+                </div>
+              </div>
+
+              <div class="store-fixtures fridge-row" aria-hidden="true">
+                <div class="fixture fridge-fixture" data-area="fridge-beverage">
+                  <span class="fixture-type">FRIDGE</span>
+                  <strong>BEVERAGE</strong>
+                </div>
+                <div class="fixture fridge-fixture" data-area="fridge-dairy">
+                  <span class="fixture-type">FRIDGE</span>
+                  <strong>DAIRY</strong>
+                </div>
+                <div class="fixture fridge-fixture" data-area="fridge-frozen">
+                  <span class="fixture-type">FRIDGE</span>
+                  <strong>FROZEN</strong>
+                </div>
+                <div class="fixture fridge-fixture" data-area="fridge-beer">
+                  <span class="fixture-type">FRIDGE</span>
+                  <strong>BEER</strong>
+                </div>
+              </div>
+              
+              <div class="station-rack" id="station-rack">
+                <div class="station open" id="station-1">
+                  <span class="name">POS 01</span>
+                  <span class="status">OPEN</span>
+                </div>
+                <div class="station closed" id="station-2">
+                  <span class="name">POS 02</span>
+                  <span class="status">CLOSED</span>
+                </div>
+              </div>
+
+              <div id="customers-layer" class="customers-layer"></div>
+
+              <div class="customer-state-legend" aria-label="Customer state legend">
+                <span><i class="legend-customer normal"></i>NORMAL CUSTOMER</span>
+                <span><i class="legend-customer angry"></i>ANGRY CUSTOMER</span>
+              </div>
+              
+              <footer class="schematic-footer">
+                STORE FLOOR - TOP-DOWN SCHEMATIC
+              </footer>
+            </div>
           </div>
         </section>
 
-        <aside class="metrics" aria-label="Simulation metrics">
-          <h2>Metrics</h2>
-          <dl>
-            <div><dt>Queue 1</dt><dd id="metric-q1">0</dd></div>
-            <div><dt>Queue 2</dt><dd id="metric-q2">0</dd></div>
-            <div><dt>Avg Wait</dt><dd id="metric-wait">0.0m</dd></div>
-            <div><dt>Served</dt><dd id="metric-served">0</dd></div>
-            <div><dt>Upset</dt><dd id="metric-upset">0</dd></div>
-            <div><dt>POS 2 Opened</dt><dd id="metric-pos2">Never</dd></div>
-          </dl>
+        <!-- Analysis Dashboard -->
+        <section class="analysis-panel">
+          <div class="analysis-grid">
+            <div class="analysis-chart analysis-chart-wide">
+              <div class="panel-header">
+                <h3>THROUGHPUT ANALYSIS - QUEUE LENGTH & BUSY CASHIERS</h3>
+                <div class="legend">
+                  <span class="item"><span class="dot green"></span> QUEUE LENGTH</span>
+                  <span class="item"><span class="dot orange"></span> BUSY CASHIERS</span>
+                </div>
+              </div>
+              <div class="chart-container">
+                <canvas id="analysis-chart"></canvas>
+                <div class="chart-tooltip" id="chart-tooltip" style="display: none;">
+                  <div class="time">00:00</div>
+                  <div class="row">queueLen : <strong id="tooltip-q">0</strong></div>
+                  <div class="row">busy : <strong id="tooltip-b">0</strong></div>
+                </div>
+              </div>
+            </div>
 
-          <h2>Event Log</h2>
-          <ol id="event-log" class="event-log"></ol>
-        </aside>
-      </section>
-    </main>
+            <div class="analysis-chart">
+              <div class="panel-header compact">
+                <h3>AVERAGE CT VS NUMBER OF STAFFS</h3>
+                <span class="axis-label">Avg CT (minutes)</span>
+              </div>
+              <div class="chart-container">
+                <canvas id="cycle-chart"></canvas>
+              </div>
+            </div>
+
+            <div class="analysis-chart">
+              <div class="panel-header">
+                <h3>THROUGHPUT VS NUMBER OF STAFFS</h3>
+                <div class="legend">
+                  <span class="item"><span class="dot orange"></span> CUSTOMERS / MIN</span>
+                </div>
+              </div>
+              <div class="chart-container">
+                <canvas id="throughput-chart"></canvas>
+              </div>
+            </div>
+
+            <div class="event-log-panel">
+              <div class="panel-header">
+                <h3>CUSTOMER EVENT LOG</h3>
+                <span class="axis-label"><span id="event-log-shown">0</span> / <span id="event-log-total">0</span> shown</span>
+              </div>
+              <ol id="customer-event-log" class="customer-event-log"></ol>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
 
     <script src="app.js"></script>
   </body>
