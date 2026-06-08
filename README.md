@@ -1,119 +1,287 @@
-# 7/11 Convenience Store
-
-# Discrete Event Simulation (DES)
+# 7-Eleven Customer Queue Management Simulator
 
 ## Project Overview
 
-This project is a **Discrete Event Simulation (DES)** of a **7/11 convenience store** using **2D pixel-art sprite assets and animations**.
+This project is a **Discrete Event Simulation (DES)** for a **7-Eleven convenience store checkout and store-operation process**.
 
-The simulation models real-world store operations where:
+The simulation models real-world convenience store behavior including:
 
-* Customers arrive at random times
-* Customers select items
-* Customers queue at cashier stations
-* Queue congestion occurs
-* A second POS cashier station opens dynamically
+* Customer arrivals
+* Item selection and shopping behavior
+* Queue management
+* Dynamic cashier operations
+* Store cleaning and maintenance
+* Inventory preparation and restocking
+* Peak-hour staffing adjustments
 
-The simulation focuses on:
+The simulation represents a **24/7 operating 7-Eleven branch** with limited staffing resources and adaptive cashier management.
 
-> **Queue management and cashier utilization using discrete-event modeling principles.**
+The main focus is:
+
+> **Queue management, cashier utilization, dynamic staffing behavior, and operational efficiency using discrete-event simulation principles.**
 
 ---
 
-# What is Discrete Event Simulation?
+# Store Staffing Configuration
 
-A **Discrete Event Simulation (DES)** models a system where changes happen only at specific events in time.
+The store operates with:
 
-In this project:
+```text
+3 Total Staff Members
+```
 
-* The system state changes whenever an event occurs.
-* Time moves from one event to another.
+Staff assignments dynamically change depending on:
 
-Example events:
+* Peak-hour demand
+* Queue congestion
+* Time of day
+* Store operational needs
+
+---
+
+# Staff Roles
+
+## Staff 1 — Primary Cashier
+
+The first staff member is responsible for:
+
+* Operating the main POS/cashiering system
+* Processing customer transactions
+* Managing the primary checkout lane
+
+At the beginning of normal operations:
+
+```text
+ONLY 1 POS lane is active
+```
+
+---
+
+## Staff 2 — Utility and Secondary Cashier
+
+The second staff member initially handles store preparation tasks such as:
+
+* Preparing hotdogs
+* Preparing donuts
+* Preparing soft-serves
+* Preparing ice cream stations
+* Organizing inventory
+* Restocking shelves
+* Cleaning the store
+* Refilling refrigerators
+
+This staff member only opens the second cashier lane when:
+
+```text
+IF peak hours are active
+OR
+IF queue length exceeds the configured threshold
+```
+
+THEN:
+
+```text
+Second POS lane becomes active
+```
+
+This creates a dynamic cashier-allocation system inside the simulation.
+
+---
+
+## Staff 3 — Night Shift Utility Staff
+
+The third staff member only becomes active during the night shift:
+
+```text
+6:00 PM – 2:00 AM
+```
+
+This staff member assists with:
+
+* Cleaning
+* Shelf restocking
+* Inventory management
+* Refrigerator restocking
+* General store maintenance
+
+The third staff member does not operate a cashier lane unless future simulation configurations enable emergency cashier support.
+
+---
+
+# Store Operating Schedule
+
+## Store Hours
+
+The store operates continuously:
+
+```text
+24 Hours / 7 Days
+```
+
+The simulation clock continuously cycles through daily operations.
+
+---
+
+# Peak-Hour Configuration
+
+The simulation includes multiple demand-surge windows.
+
+## Morning Peak
+
+```text
+9:00 AM – 12:00 PM
+```
+
+## Evening Peak
+
+```text
+5:00 PM – 7:00 PM
+```
+
+## Night Peak
+
+```text
+9:00 PM – 11:00 PM
+```
+
+During peak periods:
+
+* Customer arrivals increase
+* Queue congestion becomes more likely
+* Cashier utilization rises
+* Waiting times increase
+* The second cashier lane may automatically open
+
+---
+
+# Dynamic POS Activation Logic
+
+## Initial State
+
+At the start of regular operations:
+
+```text
+POS Lane 1 = OPEN
+POS Lane 2 = CLOSED
+```
+
+The second cashier lane opens only when:
+
+```text
+Peak hours are active
+```
+
+OR
+
+```text
+Queue length exceeds threshold
+```
+
+Example:
+
+```text
+IF queue length >= 5 customers
+THEN activate second cashier
+```
+
+When demand decreases:
+
+```text
+Second cashier lane closes
+```
+
+and the staff member returns to:
+
+* Cleaning
+* Restocking
+* Inventory preparation
+* Food preparation
+
+---
+
+# What Is Discrete Event Simulation?
+
+A **Discrete Event Simulation (DES)** models a system where state changes happen only when specific events occur.
+
+In this simulation, state changes happen during events such as:
 
 * Customer arrival
-* Customer enters store
-* Customer picks item
+* Shopping completed
 * Customer joins queue
-* Cashier starts service
-* Cashier finishes transaction
-* POS 2 opens
-* Customer exits store
+* Cashier opens
+* Cashier closes
+* Cashier begins service
+* Cashier completes service
+* Shelf restocking
+* Cleaning operations
+* Inventory preparation
+* Peak-hour activation
+
+Between events, the simulation clock advances efficiently without recalculating every second.
 
 ---
 
 # Simulation Objective
 
-The main objective is to determine:
+The objective is to evaluate:
 
-> **At what queue length or waiting time should the 2nd cashiering system open to minimize long queues and customer dissatisfaction?**
+> **How customer arrival rates, queue congestion, staffing behavior, peak-hour demand, and dynamic cashier activation affect store efficiency and checkout performance.**
+
+The simulation evaluates:
+
+* Queue performance
+* Waiting-time behavior
+* Cashier utilization
+* Throughput efficiency
+* Peak-hour congestion
+* Staffing efficiency
+* Operational workload distribution
 
 ---
 
 # System Components
 
-## Entities
+## Customers
 
-Entities are objects that move through the system.
+Customers move through the simulation by:
 
-### Customers
-
-Customers:
-
-* Enter store
-* Pick items
-* Queue at cashier
-* Pay
-* Exit store
-
-### Cashiers
-
-Cashiers:
-
-* Process transactions
-* Serve queues
-* Open/close POS systems
-
-### Staff
-
-Staff:
-
-* Clean store
-* Refill shelves
-* Maintain store operations
+* Arriving at the store
+* Shopping for items
+* Joining checkout queues
+* Receiving cashier service
+* Leaving the store
 
 ---
 
-# Resources
+## Cashier Resources
 
-Resources are limited service points.
+The simulation supports:
 
-## POS Systems
+```text
+2 POS Cashier Lanes
+```
 
-* POS 1 (Initially Open)
-* POS 2 (Initially Closed)
+However:
 
-Only one customer can be served per POS at a time.
+* Only one cashier lane is initially active
+* The second lane dynamically opens based on demand
 
 ---
 
-# Queues
+## Utility Operations
 
-## Queue 1
+Utility operations include:
 
-Used when:
+* Hotdog preparation
+* Donut preparation
+* Soft-serve preparation
+* Ice cream preparation
+* Shelf restocking
+* Refrigerator refilling
+* Cleaning operations
+* Inventory organization
 
-```text id="jlwm4r"
-POS 1 is the only active cashier.
-```
-
-## Queue 2
-
-Activated when:
-
-```text id="ewu6cl"
-POS 2 opens.
-```
+These operations run as background DES events.
 
 ---
 
@@ -121,170 +289,101 @@ POS 2 opens.
 
 The simulation tracks:
 
-| Variable      | Description                    |
-| ------------- | ------------------------------ |
-| Queue Length  | Number of waiting customers    |
-| Waiting Time  | Customer waiting duration      |
-| POS Status    | Open or Closed                 |
-| Customer Mood | Happy, Neutral, Upset          |
-| Service Time  | Time cashier serves customer   |
-| Arrival Rate  | Frequency of customer arrivals |
+| Variable             | Description                          |
+| -------------------- | ------------------------------------ |
+| Queue length         | Number of waiting customers          |
+| Waiting time         | Customer queue waiting duration      |
+| Service time         | Transaction processing duration      |
+| Arrival rate         | Customer inter-arrival rate          |
+| Cashier utilization  | Cashier workload percentage          |
+| Throughput           | Customers served                     |
+| Peak queue length    | Maximum queue length                 |
+| Busy cashiers        | Number of active POS lanes           |
+| Utility workload     | Cleaning/restocking activity         |
+| POS activation count | Number of times second cashier opens |
 
 ---
 
 # Discrete Events
 
-## Event 1 — Customer Arrival
+## Customer Arrival
 
-A customer arrives at the store entrance.
+Customers enter the system according to configurable arrival distributions.
 
-### State Change:
+## Shopping Completed
 
-```text id="a3q7to"
-Customers in Store +1
-```
+Customers finish selecting items.
 
----
+## Join Queue
 
-## Event 2 — Customer Opens Door
+Customers join checkout queues.
 
-Customer performs entrance animation.
+## Cashier Opens
 
-### Animation:
+The second POS lane activates during:
 
-* Walk to door
-* Door opens
-* Customer enters
+* Peak hours
+* Long queue conditions
 
----
+## Cashier Starts Service
 
-## Event 3 — Item Selection
+Available cashiers begin processing customers.
 
-Customer chooses:
+## Cashier Finishes Service
 
-* Shelf item
-* Fridge item
+Transactions are completed and metrics are updated.
 
-### Random Selection Time:
+## Shelf Restocking
 
-```text id="bq8ah8"
-30–120 seconds
-```
+Staff restock shelves and refrigerators.
 
----
+## Food Preparation
 
-## Event 4 — Join Queue
+Staff prepare:
 
-Customer enters:
+* Hotdogs
+* Donuts
+* Soft-serves
+* Ice cream stations
 
-* Queue 1
-  OR
-* Shortest available queue
+## Cleaning Operations
 
----
-
-## Event 5 — Cashier Starts Service
-
-Cashier begins:
-
-* Scanning items
-* Receiving payment
-* Giving change
-
-### Service Time:
-
-```text id="1x9q4p"
-1–3 minutes
-```
-
----
-
-## Event 6 — Queue Congestion
-
-Queue 1 at POS 1 becomes long.
-
-### Condition:
-
-```text id="jlwm4r"
-Queue 1 Length >= 5
-```
-
-OR
-
-```text id="n0zfj5"
-Queue 1 Average Waiting Time >= 3 minutes
-```
-
----
-
-## Event 7 — POS 2 Opens
-
-Second cashier station activates.
-
-### State Change:
-
-```text id="l4mk6s"
-POS 2 = OPEN
-```
-
-Customers redistribute between queues.
-
----
-
-## Event 8 — Customer Exits
-
-Customer leaves store.
-
-### Animation:
-
-* Walk to door
-* Door opens
-* Customer exits
+Store cleaning tasks occur periodically throughout the simulation.
 
 ---
 
 # Queue Logic
 
-## Initial State
+Initial configuration:
 
-```text id="sy7bzb"
-POS 1 = OPEN
-POS 2 = CLOSED
+```text
+Queue Length = 0
+POS Lane 1 = OPEN
+POS Lane 2 = CLOSED
 ```
 
-All customers use Queue 1.
+Cashier activation rule:
 
----
-
-# Dynamic Queue Management
-
-## Opening Rule
-
-```text id="bnd27h"
-IF Queue 1 Length >= 5
-OR Queue 1 Average Waiting Time >= 3 mins
-THEN Open POS 2
+```text
+IF peak hours are active
+OR queue length exceeds threshold
+THEN open POS Lane 2
 ```
 
----
+Cashier deactivation rule:
 
-## Closing Rule
-
-```text id="n4mb9m"
-IF Queue Length <= 2
-AND Average Waiting Time < 1 min
-THEN Close POS 2
+```text
+IF queue demand decreases
+THEN close POS Lane 2
 ```
 
----
+Service rule:
 
-# Customer Mood System
-
-| Waiting Time | Mood    |
-| ------------ | ------- |
-| 0–2 mins     | Happy   |
-| 3–5 mins     | Neutral |
-| 6+ mins      | Upset   |
+```text
+IF cashier available
+AND customer waiting
+THEN assign customer to cashier
+```
 
 ---
 
@@ -292,71 +391,46 @@ THEN Close POS 2
 
 The simulation records:
 
-| Metric                 | Purpose               |
-| ---------------------- | --------------------- |
-| Average Waiting Time   | Queue efficiency      |
-| Queue Length           | Congestion level      |
-| Total Customers Served | Store throughput      |
-| Upset Customers        | Satisfaction analysis |
-| POS Utilization        | Cashier workload      |
-| Time POS 2 Opened      | Staffing optimization |
-
----
-
-# Sprite Animations Included
-
-## Customer Animations
-
-* Walking
-* Entering store
-* Opening door
-* Picking shelf items
-* Picking fridge items
-* Queue waiting
-* Exiting store
-
----
-
-## Cashier Animations
-
-* Idle
-* Scanning
-* Accepting payment
-* Giving change
-
----
-
-## Staff Animations
-
-* Sweeping floor
-* Cleaning store
-* Restocking shelves
-* Carrying stock boxes
-* Stopping restock work to open POS 2 when Queue 1 becomes long
-* Cashier scanning animation while serving customers
+| Metric                        | Purpose                      |
+| ----------------------------- | ---------------------------- |
+| Average waiting time          | Measures checkout efficiency |
+| Average queue length          | Measures congestion          |
+| Peak queue length             | Worst queue condition        |
+| Customers served              | Checkout throughput          |
+| Customers arrived             | Demand generation            |
+| Cashier utilization           | POS workload                 |
+| Utility workload              | Staff operational workload   |
+| POS lane activation frequency | Measures dynamic staffing    |
+| Peak-hour performance         | Rush-hour efficiency         |
 
 ---
 
 # Recommended Simulation Flow
 
-```text id="ytv60l"
+```text
 START
 
-Customer Arrives
-    ↓
-Customer Enters Store
-    ↓
-Customer Picks Items
-    ↓
-Customer Joins Queue
-    ↓
-Cashier Processes Transaction
-    ↓
-IF Queue Too Long:
-    Open POS 2
-    Redistribute Customers
-    ↓
-Customer Exits Store
+Store operates 24/7
+
+Customer arrives
+Customer shops
+Customer joins queue
+
+IF queue exceeds threshold
+OR peak hours active
+    Open POS Lane 2
+ENDIF
+
+Cashier serves customer
+Transaction completed
+
+Utility staff performs:
+    Cleaning
+    Shelf restocking
+    Food preparation
+    Inventory organization
+
+Metrics updated
 
 END
 ```
@@ -365,31 +439,12 @@ END
 
 # Recommended Simulation Engines
 
-## Best for DES
+Recommended DES frameworks:
 
-* SimPy (Python)
+* SimPy
 * AnyLogic
 * Arena Simulation
 * Simul8
-
-## Best for Game-Based Visual Simulation
-
-* Unity 2D
-* Godot
-* Construct 3
-
----
-
-# Conclusion
-
-This project is a **Discrete Event Simulation** because:
-
-* System changes occur only during events
-* Customers interact through queues and service points
-* Time advances from event to event
-* Resources and queues are dynamically managed
-
-The simulation demonstrates how opening a second cashiering system at the correct time can significantly reduce queue congestion and improve customer satisfaction in a convenience store environment.
 
 ---
 
@@ -397,57 +452,124 @@ The simulation demonstrates how opening a second cashiering system at the correc
 
 ```text
 11_simulation/
-├── README.md
-├── requirements.txt
-├── simulation/
-│   ├── config.py       # simulation parameters and POS rules
-│   ├── metrics.py      # performance measurements
-│   ├── resources.py    # cashier resources and queue logic
-│   ├── processes.py    # customer and arrival processes
-│   └── run.py          # setup, run, and results
-└── web/
-    ├── assets/         # local image assets for sprites and store fixtures
-    ├── index.html      # presentation structure
-    ├── styles.css      # visual layout and animations
-    └── app.js          # browser animation simulation
+|-- README.md
+|-- requirements.txt
+|-- simulation/
+|   |-- config.py
+|   |-- metrics.py
+|   |-- resources.py
+|   |-- processes.py
+|   `-- run.py
+`-- web/
+    |-- index.html
+    |-- styles.css
+    `-- app.js
 ```
-
-The project has two runnable layers:
-
-* **Simulation Core** - the SimPy DES model in `simulation/`
-* **Presentation Layer** - the animated browser prototype in `web/`
 
 ---
 
-# Running the Discrete Simulation
+# Running the Simulation
 
-Run the SimPy version from the terminal:
+## Python Simulation
 
 ```bash
 pip install -r requirements.txt
 python -m simulation.run
 ```
 
-The Python model is organized as layers:
+---
 
-* `simulation/config.py` - parameters and POS rules
-* `simulation/metrics.py` - waiting time, cycle time, queue, and POS metrics
-* `simulation/resources.py` - cashier resources and queue-management rules
-* `simulation/processes.py` - customer and arrival-generator processes
-* `simulation/run.py` - setup, run, and results entry point
+## Web Dashboard
+
+```bash
+cd web
+python -m http.server 8000
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000/
+```
 
 ---
 
-# Running the Web Simulation
+# Dashboard Features
 
-Open `web/index.html` in a browser to run the animated DES prototype.
+The dashboard includes:
 
-The app includes:
+* Queue visualization
+* POS lane activity
+* Dynamic cashier activation
+* Peak-hour monitoring
+* Cashier utilization charts
+* Queue trend charts
+* Utility staff activity monitoring
+* Event logs
+* Real-time metrics
 
-* Local image assets for customers, staff, cashier, shelves, and fridge
-* Random customer arrivals
-* Shopping, queueing, service, and exit events
-* Dynamic POS 2 opening and closing rules
-* Customer mood changes based on waiting time
-* Live queue, wait time, throughput, and upset-customer metrics
-* Controls for arrival pace, POS 2 thresholds, simulation speed, reset, and rush waves
+---
+
+# Git Workflow Rules
+
+To maintain clean version control practices, developers must follow a branch-based workflow.
+
+## Branching Rule
+
+Before making changes:
+
+```bash
+git checkout -b feature/branch-name
+```
+
+All new features, fixes, and updates must be developed inside their own branch.
+
+---
+
+## Push Workflow
+
+After completing changes:
+
+```bash
+git add .
+git commit -m "Your commit message"
+git push origin feature/branch-name
+```
+
+---
+
+## Branch Cleanup Rule
+
+Once the branch has been pushed and merged successfully:
+
+```bash
+git branch -d feature/branch-name
+```
+
+Optionally delete the remote branch:
+
+```bash
+git push origin --delete feature/branch-name
+```
+
+This ensures:
+
+* Cleaner repository history
+* Better collaboration
+* Easier feature tracking
+* Safer development workflow
+
+---
+
+# Expected Simulation Analysis
+
+The simulation can analyze:
+
+* Whether one cashier is sufficient during normal hours
+* When the second cashier should activate
+* Queue congestion severity
+* Peak-hour behavior
+* Utility staff workload
+* Checkout bottlenecks
+* Staffing optimization strategies
+* Store operational efficiency
