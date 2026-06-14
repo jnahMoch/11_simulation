@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import random
 
-from simulation.config import DEFAULT_CONFIG, SimulationConfig
+from simulation.config import SimulationConfig
 from simulation.resources import (
     choose_cashier,
     current_arrival_rate,
@@ -89,9 +89,18 @@ def utility_staff_process(env, store, metrics, staff_name: str, night_only: bool
         if night_only and not is_night_shift(env.now, sim_config):
             continue
 
-        if staff_name == "Staff 2" and len(store["open_lanes"]) > 1 and store["open_lanes"][1]:
-            metrics.log_event(env.now, "Staff 2 pauses utility work while operating POS 2")
+        paused_for_pos2 = False
+        while staff_name == "Staff 2" and len(store["open_lanes"]) > 1 and store["open_lanes"][1]:
+            if not paused_for_pos2:
+                metrics.log_event(env.now, "Staff 2 pauses utility work while operating POS 2")
+                paused_for_pos2 = True
+            yield env.timeout(sim_config.pos_monitor_interval)
+
+        if night_only and not is_night_shift(env.now, sim_config):
             continue
+
+        if paused_for_pos2:
+            metrics.log_event(env.now, "Staff 2 resumes utility work after POS 2 closes")
 
         task_name = sim_config.utility_tasks[task_index % len(sim_config.utility_tasks)]
         task_index += 1
@@ -107,5 +116,10 @@ def staffing_processes(env, store, metrics):
     Staff 1 is represented by POS Lane 1. Staff 2 alternates between utility
     work and POS 2. Staff 3 works utility tasks during the night shift.
     """
-    env.process(utility_staff_process(env, store, metrics, "Staff 2"))
-    env.process(utility_staff_process(env, store, metrics, "Staff 3", night_only=True))
+    sim_config: SimulationConfig = store["config"]
+    if sim_config.total_staff >= 2:
+        env.process(utility_staff_process(env, store, metrics, "Staff 2"))
+    if sim_config.total_staff >= 3:
+        env.process(utility_staff_process(env, store, metrics, "Staff 3", night_only=True))
+    for staff_number in range(4, sim_config.total_staff + 1):
+        env.process(utility_staff_process(env, store, metrics, f"Staff {staff_number}"))

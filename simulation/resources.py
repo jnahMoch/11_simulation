@@ -46,7 +46,10 @@ def choose_cashier(store):
         store["open_lanes"][0] = True
         active_indexes = [0]
 
-    best_index = min(active_indexes, key=lambda index: len(store["pos_lanes"][index].queue))
+    best_index = min(
+        active_indexes,
+        key=lambda index: len(store["pos_lanes"][index].queue) + store["pos_lanes"][index].count,
+    )
     return store["pos_lanes"][best_index]
 
 
@@ -57,9 +60,9 @@ def queue_length(store) -> int:
     )
 
 
-def pos1_checkout_load(store) -> int:
+def pos1_queue_length(store) -> int:
     pos1 = store["pos_lanes"][0]
-    return len(pos1.queue) + pos1.count
+    return len(pos1.queue)
 
 
 def busy_cashiers(store) -> int:
@@ -125,7 +128,7 @@ def maybe_open_pos2(env, store, metrics, reason: str = "queue rule") -> None:
     if sim_config.pos_lanes < 2 or store["open_lanes"][1]:
         return
 
-    queue_pressure = pos1_checkout_load(store) >= sim_config.queue_open_threshold
+    queue_pressure = pos1_queue_length(store) >= sim_config.queue_open_threshold
     wait_pressure = average_queue_wait(env, store, 0) >= sim_config.wait_open_threshold
 
     if queue_pressure or wait_pressure:
@@ -147,7 +150,7 @@ def maybe_close_pos2(env, store, metrics) -> None:
 
     demand_recovered = (
         queue_length(store) <= sim_config.queue_close_threshold
-        and average_queue_wait(env, store) < sim_config.wait_close_threshold
+        and average_queue_wait(env, store, 0) < sim_config.wait_close_threshold
     )
     if demand_recovered:
         store["open_lanes"][1] = False
