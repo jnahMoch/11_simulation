@@ -154,6 +154,10 @@ function randomBetweenWith(randomFn, min, max) {
   return Math.round(min + randomFn() * (max - min));
 }
 
+function exponentialDelay(meanSeconds, randomFn = Math.random) {
+  return -Math.log(1 - randomFn()) * meanSeconds;
+}
+
 function minutesLabel(seconds) {
   return `${(seconds / 60).toFixed(1)}m`;
 }
@@ -229,7 +233,7 @@ function simulateFixedStaffMetrics(staffCount) {
       const shopTime = randomBetweenWith(randomFn, timings.shopMin, timings.shopMax);
       scheduleAnalysisEvent(event.at + shopTime, "join-queue", { arrivalAt: event.at });
 
-      const nextDelay = (baseDelay / intensity) * (0.8 + randomFn() * 0.4);
+      const nextDelay = exponentialDelay(baseDelay / intensity, randomFn);
       scheduleAnalysisEvent(event.at + nextDelay, "arrival");
     }
 
@@ -370,7 +374,7 @@ function setPos2Open(open) {
   }
 
   addEventLog(open
-    ? "POS 2: Opens because POS 1 queue reached 5 customers"
+    ? "POS 2: Opens because POS 1 queue reached 5 waiting customers"
     : "POS 2: Closes; Staff 2 returns to utility work");
   redistributeQueues();
   tryStartService();
@@ -378,8 +382,7 @@ function setPos2Open(open) {
 
 function evaluateDynamicPos2() {
   const totalQLen = state.queues.reduce((sum, queue) => sum + queue.length, 0);
-  const pos1LineLength = state.queues[0].length + (state.pos[0].busy ? 1 : 0);
-  const pos1QueuePressure = pos1LineLength >= 5;
+  const pos1QueuePressure = state.queues[0].length >= 5;
   const pos2Idle = state.pos[1] && !state.pos[1].busy && state.queues[1].length === 0;
 
   if (!state.pos[1].open && pos1QueuePressure) {
@@ -412,9 +415,10 @@ function schedule(delay, type, payload = {}) {
 }
 
 function formatTime(seconds) {
-  const m = Math.floor(seconds / 60);
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 function addEventLog(message) {
@@ -540,7 +544,7 @@ function handleArrival() {
   
   const baseDelay = Number(arrivalRateInput.value);
   const intensity = isWebPeakTime() ? Number(surgeInput.value) : 1.0;
-  const nextDelay = (baseDelay / intensity) * (0.8 + Math.random() * 0.4);
+  const nextDelay = exponentialDelay(baseDelay / intensity);
   schedule(nextDelay, "arrival");
 }
 

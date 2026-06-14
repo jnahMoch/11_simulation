@@ -84,10 +84,36 @@ class Metrics:
     def average_active_cashiers(self) -> float:
         return average([value for _, value in self.active_cashier_samples])
 
-    def cashier_utilization(self, sim_time: float, pos_lanes: int) -> float:
-        if sim_time <= 0 or pos_lanes <= 0:
+    def active_cashier_capacity_time(self, sim_time: float, fallback_lanes: int) -> float:
+        if sim_time <= 0:
             return 0
-        return sum(self.service_times) / (sim_time * pos_lanes)
+
+        if not self.active_cashier_samples:
+            return sim_time * fallback_lanes
+
+        capacity_time = 0.0
+        previous_time = 0.0
+        previous_active = self.active_cashier_samples[0][1]
+
+        for sample_time, active_count in self.active_cashier_samples:
+            bounded_time = min(sample_time, sim_time)
+            if bounded_time > previous_time:
+                capacity_time += (bounded_time - previous_time) * previous_active
+            previous_time = bounded_time
+            previous_active = active_count
+            if previous_time >= sim_time:
+                break
+
+        if previous_time < sim_time:
+            capacity_time += (sim_time - previous_time) * previous_active
+
+        return capacity_time
+
+    def cashier_utilization(self, sim_time: float, pos_lanes: int) -> float:
+        capacity_time = self.active_cashier_capacity_time(sim_time, pos_lanes)
+        if capacity_time <= 0:
+            return 0
+        return sum(self.service_times) / capacity_time
 
     def print_results(self, sim_time: float | None = None, pos_lanes: int = 2) -> None:
         sim_time = sim_time or 1

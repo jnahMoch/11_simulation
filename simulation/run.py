@@ -42,10 +42,10 @@ def run_fixed_staff_simulation(staff_count: int, sim_config: SimulationConfig = 
     """
     scenario_config = replace(
         sim_config,
+        total_staff=staff_count,
         pos_lanes=staff_count,
         initial_active_cashiers=staff_count,
         peak_enabled=False,
-        random_seed=sim_config.random_seed + staff_count,
     )
     return run_simulation(scenario_config)
 
