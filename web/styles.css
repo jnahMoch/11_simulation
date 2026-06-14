@@ -423,6 +423,11 @@ input[type="range"] {
   background: #64748b;
 }
 
+.time-control:has(+ .playback-controls .icon-button.is-running) .clock-icon {
+  background: var(--primary);
+  animation: livePulse 1s ease-in-out infinite;
+}
+
 .time-control strong {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.76rem;
@@ -444,6 +449,21 @@ input[type="range"] {
   border-radius: 6px;
   color: #0f172a;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.playback-controls .icon-button.is-running {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+@keyframes livePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(0, 129, 72, 0.28);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(0, 129, 72, 0);
+  }
 }
 
 .speed-selector {

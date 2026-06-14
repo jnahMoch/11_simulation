@@ -46,7 +46,10 @@ def choose_cashier(store):
         store["open_lanes"][0] = True
         active_indexes = [0]
 
-    best_index = min(active_indexes, key=lambda index: len(store["pos_lanes"][index].queue))
+    best_index = min(
+        active_indexes,
+        key=lambda index: len(store["pos_lanes"][index].queue) + store["pos_lanes"][index].count,
+    )
     return store["pos_lanes"][best_index]
 
 

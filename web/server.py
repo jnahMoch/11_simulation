@@ -67,9 +67,11 @@ def config_from_query(params: dict[str, list[str]]) -> SimulationConfig:
     return SimulationConfig(
         total_staff=DEFAULT_CONFIG.total_staff,
         pos_lanes=max(1, pos_lanes),
-        initial_active_cashiers=DEFAULT_CONFIG.initial_active_cashiers,
+        initial_active_cashiers=max(1, min(pos_lanes, DEFAULT_CONFIG.pos_lanes)),
         queue_open_threshold=DEFAULT_CONFIG.queue_open_threshold,
         queue_close_threshold=DEFAULT_CONFIG.queue_close_threshold,
+        wait_open_threshold=DEFAULT_CONFIG.wait_open_threshold,
+        wait_close_threshold=DEFAULT_CONFIG.wait_close_threshold,
         pos_monitor_interval=DEFAULT_CONFIG.pos_monitor_interval,
         arrival_rate=1 / max(1, arrival_mean),
         peak_arrival_rate=peak_rate_for(arrival_mean, surge_multiplier),
@@ -86,6 +88,7 @@ def config_from_query(params: dict[str, list[str]]) -> SimulationConfig:
         utility_tasks=DEFAULT_CONFIG.utility_tasks,
         utility_task_interval=DEFAULT_CONFIG.utility_task_interval,
         utility_task_duration=DEFAULT_CONFIG.utility_task_duration,
+        upset_wait_time=DEFAULT_CONFIG.upset_wait_time,
     )
 
 
@@ -94,6 +97,7 @@ def summary_payload(metrics, config: SimulationConfig) -> dict[str, object]:
         "customersArrived": metrics.arrived_customers,
         "customersServed": metrics.completed_customers,
         "averageWaitingTime": metrics.average_waiting_time,
+        "maximumWaitingTime": max(metrics.waiting_times, default=0),
         "peakAverageWaitingTime": metrics.peak_average_waiting_time,
         "offPeakAverageWaitingTime": metrics.off_peak_average_waiting_time,
         "averageServiceTime": metrics.average_service_time,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import random
 
-from simulation.config import DEFAULT_CONFIG, SimulationConfig
+from simulation.config import SimulationConfig
 from simulation.resources import (
     choose_cashier,
     current_arrival_rate,

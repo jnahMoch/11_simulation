@@ -25,6 +25,9 @@ const shopMinValEl = document.querySelector("#shop-min-val");
 const shopMaxValEl = document.querySelector("#shop-max-val");
 const speedButtons = document.querySelectorAll(".speed-selector button");
 
+const playIconSvg = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+const pauseIconSvg = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
+
 const metrics = {
   wait: document.querySelector("#metric-wait"),
   maxWait: document.querySelector("#max-wait"),
@@ -109,13 +112,16 @@ const state = {
   staffingThroughput: [],
   eventLog: [],
   chartUpdateInterval: 10,
-  lastChartUpdate: 0
+  lastChartUpdate: 0,
+  backendResultsActive: false,
+  backendLoading: false
 };
 
 function init() {
   window.addEventListener('resize', resizeCanvas);
   syncTimingControls();
   setupEventListeners();
+  updatePlaybackControls();
   // Ensure canvas size is set after layout paints
   setTimeout(resizeCanvas, 100);
   requestAnimationFrame(tick);
@@ -275,7 +281,7 @@ function updateStaffingAnalysis() {
 }
 
 function setupEventListeners() {
-  toggleButton.addEventListener("click", toggleRun);
+  toggleButton.addEventListener("click", runAuthoritativeSimulation);
   playBtn.addEventListener("click", toggleRun);
   resetButton.addEventListener("click", resetSimulation);
   
@@ -327,6 +333,110 @@ function setupEventListeners() {
       state.speed = Number(btn.dataset.speed);
     });
   });
+}
+
+function backendQueryParams() {
+  const timings = timingConfig();
+  const serviceMean = (timings.serviceMin + timings.serviceMax) / 2;
+  const params = new URLSearchParams({
+    simTimeMinutes: String(Number(hoursInput.value) * 60),
+    arrivalMeanSeconds: arrivalRateInput.value,
+    serviceMeanSeconds: String(serviceMean),
+    shoppingMinSeconds: String(timings.shopMin),
+    shoppingMaxSeconds: String(timings.shopMax),
+    posLanes: cashierCountEl.textContent,
+    seed: seedInput.value || "42",
+    peakEnabled: state.peakEnabled ? "1" : "0",
+    surgeMultiplier: surgeInput.value
+  });
+
+  return params.toString();
+}
+
+async function runAuthoritativeSimulation() {
+  if (state.backendLoading) return;
+
+  state.backendLoading = true;
+  const previousLabel = toggleButton.innerHTML;
+  toggleButton.disabled = true;
+  toggleButton.textContent = "RUNNING...";
+
+  try {
+    const response = await fetch(`/api/simulation?${backendQueryParams()}`, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Simulation API returned ${response.status}`);
+
+    const payload = await response.json();
+    resetSimulation();
+    applyBackendResults(payload);
+    state.started = true;
+    state.running = true;
+  } catch (error) {
+    addEventLog(`Simulation API error: ${error.message}`);
+  } finally {
+    state.backendLoading = false;
+    toggleButton.disabled = false;
+    if (!state.backendResultsActive) toggleButton.innerHTML = previousLabel;
+    updatePlaybackControls();
+  }
+}
+
+function applyBackendResults(payload) {
+  state.backendResultsActive = true;
+  state.history = mergeBackendSeries(payload.series);
+  state.eventLog = payload.eventLog || [];
+
+  simTimeEl.textContent = "00:00:00";
+  metrics.wait.textContent = formatTime(payload.averageWaitingTime || 0);
+  metrics.maxWait.textContent = formatTime(payload.maximumWaitingTime || payload.averageWaitingTime || 0);
+  metrics.qLen.textContent = Number(payload.averageQueueLength || 0).toFixed(1);
+  metrics.qStatus.textContent = (payload.maximumQueueLength || 0) > 5 ? "CONGESTED" : "STABLE";
+  metrics.qStatus.className = `status-tag ${(payload.maximumQueueLength || 0) > 5 ? "neutral" : "positive"}`;
+  metrics.util.textContent = `${Math.round((payload.cashierUtilization || 0) * 100)}%`;
+  metrics.utilStatus.textContent = (payload.cashierUtilization || 0) > 0.7 ? "HIGH" : "IDLE";
+  metrics.served.textContent = payload.customersServed || 0;
+  metrics.arrived.textContent = payload.customersArrived || 0;
+  metrics.surgeValBadge.textContent = Number(surgeInput.value).toFixed(1);
+
+  renderChart();
+  renderEventLog();
+}
+
+function mergeBackendSeries(series = {}) {
+  const queueSeries = series.queueLength || [];
+  const busySeries = series.busyCashiers || [];
+  const byTime = new Map();
+
+  queueSeries.forEach((point) => {
+    const time = Math.round(point.time * 60);
+    byTime.set(time, { time, qLen: point.value, busy: 0 });
+  });
+
+  busySeries.forEach((point) => {
+    const time = Math.round(point.time * 60);
+    const row = byTime.get(time) || { time, qLen: 0, busy: 0 };
+    row.busy = point.value;
+    byTime.set(time, row);
+  });
+
+  return [...byTime.values()].sort((a, b) => a.time - b.time);
+}
+
+function updatePlaybackControls() {
+  const hasStarted = state.started || state.time > 0;
+  const isComplete = state.time >= state.limit;
+  const playLabel = state.running ? "Pause simulation" : (isComplete ? "Replay simulation" : "Play simulation");
+  const runLabel = state.running
+    ? "PAUSE SIMULATION"
+    : (hasStarted && !isComplete ? "RESUME SIMULATION" : "RUN SIMULATION");
+
+  playBtn.innerHTML = state.running ? pauseIconSvg : playIconSvg;
+  playBtn.setAttribute("aria-label", playLabel);
+  playBtn.setAttribute("title", playLabel);
+  playBtn.setAttribute("aria-pressed", String(state.running));
+  playBtn.classList.toggle("is-running", state.running);
+
+  toggleButton.innerHTML = `${runLabel} <span aria-hidden="true">${state.running ? "II" : "+"}</span>`;
+  toggleButton.classList.toggle("is-running", state.running);
 }
 
 function adjustCashiers(delta) {
@@ -422,6 +532,8 @@ function formatTime(seconds) {
 }
 
 function addEventLog(message) {
+  if (state.backendResultsActive) return;
+
   state.eventLog.push(message);
   if (state.eventLog.length > 341) state.eventLog.shift();
   renderEventLog();
@@ -444,16 +556,23 @@ function renderEventLog() {
 }
 
 function toggleRun() {
-  if (!state.started) {
-    state.started = true;
+  if (state.time >= state.limit) {
     resetSimulation();
   }
+
+  if (!state.started) {
+    resetSimulation();
+    state.started = true;
+  }
   state.running = !state.running;
-  toggleButton.textContent = state.running ? "PAUSE SIMULATION" : "RESUME SIMULATION";
+  updatePlaybackControls();
 }
 
 function resetSimulation() {
   customersLayer.innerHTML = "";
+  state.running = false;
+  state.started = false;
+  state.backendResultsActive = false;
   state.time = 0;
   state.nextCustomerId = 1;
   state.events = [];
@@ -487,6 +606,7 @@ function resetSimulation() {
   renderChart();
   updateStaffingAnalysis();
   renderEventLog();
+  updatePlaybackControls();
 }
 
 function createCustomer() {
@@ -687,6 +807,14 @@ function processEvents() {
 
 function updateMetrics() {
   simTimeEl.textContent = formatTime(state.time);
+  metrics.surgeValBadge.textContent = Number(surgeInput.value).toFixed(1);
+  metrics.surgeAlert.style.display = isWebPeakTime() ? "flex" : "none";
+
+  if (state.backendResultsActive) {
+    updateCustomerUpsetStates();
+    return;
+  }
+
   updateCustomerUpsetStates();
   
   const avgWait = state.served ? state.totalWait / state.served : 0;
@@ -705,9 +833,6 @@ function updateMetrics() {
 
   metrics.served.textContent = state.served;
   metrics.arrived.textContent = state.arrived;
-  metrics.surgeValBadge.textContent = Number(surgeInput.value).toFixed(1);
-  metrics.surgeAlert.style.display = isWebPeakTime() ? "flex" : "none";
-
   if (state.time >= state.lastChartUpdate + state.chartUpdateInterval) {
     state.history.push({
       time: state.time,
@@ -739,7 +864,7 @@ function renderChart() {
   const h = chartCanvas.height;
   chartCtx.clearRect(0, 0, w, h);
 
-  const maxVal = 10;
+  const maxVal = Math.max(10, ...state.history.map((point) => Math.max(point.qLen, point.busy))) * 1.1;
   const leftPad = 34;
   const rightPad = 18;
   const topPad = 22;
@@ -899,7 +1024,7 @@ function tick(now) {
       state.time += delta * state.speed;
     } else {
       state.running = false;
-      toggleButton.textContent = "RESUME SIMULATION";
+      updatePlaybackControls();
     }
     processEvents();
     updateMetrics();
