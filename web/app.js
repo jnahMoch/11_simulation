@@ -73,6 +73,7 @@ const UTILITY_TASKS = [
 const UTILITY_INTERVAL = 20 * 60;
 const UTILITY_DURATION = 8 * 60;
 const POS_MONITOR_INTERVAL = 10;
+const RESTOCK_THRESHOLD = 40;
 
 const points = {
   entrance: { x: 50, y: 250 },
@@ -1284,6 +1285,42 @@ function removeStaffBadge(avatar) {
   }
 }
 
+function depletedShoppingAreas() {
+  return shoppingAreas
+    .filter(area => area.stock < RESTOCK_THRESHOLD && !area.restockingBy)
+    .sort((a, b) => a.stock - b.stock);
+}
+
+function availableRestockers({ isPos2Open, onNightShift, s2, s3 }) {
+  if (onNightShift) {
+    return !s3.restockTarget
+      ? [{ id: "Staff 3", avatar: s3, available: true }]
+      : [];
+  }
+
+  return !isPos2Open && !s2.restockTarget
+    ? [{ id: "Staff 2", avatar: s2, available: true }]
+    : [];
+}
+
+function assignRestock(staff, targetArea) {
+  targetArea.restockingBy = staff.id;
+  staff.avatar.restockTarget = targetArea;
+  const staffState = state[staff.id === "Staff 3" ? "staff3" : "staff2"];
+  staffState.task = `Restock ${targetArea.label}`;
+  staffState.busyUntil = Number.POSITIVE_INFINITY;
+  addEventLog(`${staff.id}: Starts restocking ${targetArea.label}`);
+  updateStaffAvatarPos(staff.avatar, points[targetArea.key]);
+
+  const badge = document.createElement("div");
+  badge.className = "restocking-badge";
+  badge.textContent = "RESTOCKING";
+  const domKey = targetArea.key.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
+  const fixture = document.querySelector(`.fixture[data-area="${domKey}"]`);
+  if (fixture) fixture.appendChild(badge);
+  staff.avatar.badgeEl = badge;
+}
+
 function processUtilityStaff(delta) {
   const isPos2Open = state.pos[1] && state.pos[1].open;
 
@@ -1299,6 +1336,7 @@ function processUtilityStaff(delta) {
       removeStaffBadge(s2);
     }
     state.staff2.task = null;
+    state.staff2.busyUntil = state.time;
     addEventLog("Staff 2: Pauses utility work while operating POS 2");
     updateStaffAvatarPos(s2, { x: points.station2.x + 30, y: points.station2.y });
   }
@@ -1309,37 +1347,15 @@ function processUtilityStaff(delta) {
     updateStaffAvatarPos(s2, { x: points.station2.x + 40, y: points.station2.y - 40 });
   }
 
-  // Dynamic Restocking Logic
-  const depletedAreas = shoppingAreas.filter(a => a.stock <= 50 && !a.restockingBy);
-  if (depletedAreas.length > 0) {
-    const targetArea = depletedAreas.sort((a,b) => a.stock - b.stock)[0];
-    
-    // Check if Staff 3 is available
-    const onNightShift = isNightShift(state.time);
-    const s3Available = onNightShift && !s3.restockTarget;
-    const s2Available = !isPos2Open && !s2.restockTarget;
+  const onNightShift = isNightShift(state.time);
 
-    let assignedStaffId = null;
-    if (s3Available) assignedStaffId = "Staff 3";
-    else if (s2Available) assignedStaffId = "Staff 2";
-
-    if (assignedStaffId) {
-      targetArea.restockingBy = assignedStaffId;
-      const avatar = assignedStaffId === "Staff 3" ? s3 : s2;
-      avatar.restockTarget = targetArea;
-      state[assignedStaffId === "Staff 3" ? "staff3" : "staff2"].task = `Restock ${targetArea.label}`;
-      addEventLog(`${assignedStaffId}: Starts restocking ${targetArea.label}`);
-      updateStaffAvatarPos(avatar, points[targetArea.key]);
-      
-      const badge = document.createElement("div");
-      badge.className = "restocking-badge";
-      badge.textContent = "RESTOCKING";
-      const domKey = targetArea.key.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
-      const fixture = document.querySelector(`.fixture[data-area="${domKey}"]`);
-      if (fixture) fixture.appendChild(badge);
-      avatar.badgeEl = badge;
-    }
-  }
+  const depletedAreas = depletedShoppingAreas();
+  const restockers = availableRestockers({ isPos2Open, onNightShift, s2, s3 });
+  restockers.forEach((staff, index) => {
+    const targetArea = depletedAreas[index];
+    if (!targetArea) return;
+    assignRestock(staff, targetArea);
+  });
 
   // Process Active Restocks
   ["Staff 2", "Staff 3"].forEach(staffId => {
@@ -1354,6 +1370,7 @@ function processUtilityStaff(delta) {
         avatar.restockTarget = null;
         removeStaffBadge(avatar);
         state[staffId === "Staff 3" ? "staff3" : "staff2"].task = "Idle";
+        state[staffId === "Staff 3" ? "staff3" : "staff2"].busyUntil = state.time;
         // Move to idle pos
         if (staffId === "Staff 2") updateStaffAvatarPos(s2, { x: points.station2.x + 40, y: points.station2.y - 40 });
         else updateStaffAvatarPos(s3, { x: points.station1.x + 40, y: points.station1.y - 40 });
@@ -1365,7 +1382,13 @@ function processUtilityStaff(delta) {
   if (!onNightShift) {
      s3.el.style.display = "none";
      s3.label.style.display = "none";
-     if (s3.restockTarget) { s3.restockTarget.restockingBy = null; s3.restockTarget = null; removeStaffBadge(s3); }
+     if (s3.restockTarget) {
+       s3.restockTarget.restockingBy = null;
+       s3.restockTarget = null;
+       removeStaffBadge(s3);
+       state.staff3.task = null;
+       state.staff3.busyUntil = state.time;
+     }
   } else {
      s3.el.style.display = "";
      s3.label.style.display = "";
@@ -1388,7 +1411,17 @@ function updateStaffUI() {
   const spStaff3 = document.querySelector("#sp-staff3");
 
   const isPos2Open = state.pos[1] && state.pos[1].open;
-  if (isPos2Open) {
+  const s2 = state.staffAvatars?.["Staff 2"];
+  const s3 = state.staffAvatars?.["Staff 3"];
+  const staff2Restock = s2?.restockTarget;
+  const staff3Restock = s3?.restockTarget;
+
+  if (staff2Restock) {
+    const restockText = `Restocking ${staff2Restock.label} (${Math.round(staff2Restock.stock)}%)`;
+    if (staff2TaskEl) staff2TaskEl.textContent = restockText;
+    if (spStaff2) { spStaff2.textContent = "RESTOCKING"; spStaff2.className = "sp-value sp-green"; }
+    if (staff2TaskRow) staff2TaskRow.style.display = "";
+  } else if (isPos2Open) {
     if (staff2TaskEl) staff2TaskEl.textContent = "POS 2: OPERATING";
     if (spStaff2) { spStaff2.textContent = "POS 2"; spStaff2.className = "sp-value sp-green"; }
     if (staff2TaskRow) staff2TaskRow.style.display = "";
@@ -1401,6 +1434,14 @@ function updateStaffUI() {
     if (staff2TaskEl) staff2TaskEl.textContent = taskName;
     if (spStaff2) { spStaff2.textContent = "BUSY"; spStaff2.className = "sp-value sp-red"; }
     if (staff2TaskRow) staff2TaskRow.style.display = "";
+  }
+
+  if (staff3Restock) {
+    const restockText = `Restocking ${staff3Restock.label} (${Math.round(staff3Restock.stock)}%)`;
+    if (staff3TaskEl) staff3TaskEl.textContent = restockText;
+    if (spStaff3) { spStaff3.textContent = "RESTOCKING"; spStaff3.className = "sp-value sp-green"; }
+    if (staff3TaskRow) staff3TaskRow.style.display = "";
+    return;
   }
 
   const onNightShift = isNightShift(state.time);
@@ -1442,6 +1483,15 @@ function updateShelfUI() {
     const domKey = area.key.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
     const fixture = document.querySelector(`.fixture[data-area="${domKey}"]`);
     if (!fixture) return;
+    const displayStock = Math.round(area.stock);
+    fixture.classList.toggle("low-stock", area.stock < RESTOCK_THRESHOLD);
+    fixture.classList.toggle("is-restocking", Boolean(area.restockingBy));
+    fixture.setAttribute(
+      "title",
+      area.restockingBy
+        ? `${area.label}: ${displayStock}% stock, restocking by ${area.restockingBy}`
+        : `${area.label}: ${displayStock}% stock`
+    );
     const stockBar = fixture.querySelector(".fixture-stock-bar");
     if (stockBar) {
       const pct = (area.stock / 100) * 100;
@@ -1449,7 +1499,7 @@ function updateShelfUI() {
       stockBar.style.background = pct > 70 ? "var(--primary)" : (pct > 40 ? "var(--accent-yellow)" : (pct > 20 ? "var(--accent-orange)" : "var(--accent-red)"));
     }
     const stockLabel = fixture.querySelector(".fixture-stock-pct");
-    if (stockLabel) stockLabel.textContent = `${area.stock}%`;
+    if (stockLabel) stockLabel.textContent = `${displayStock}%`;
   });
 }
 

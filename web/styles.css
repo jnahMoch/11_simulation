@@ -801,6 +801,16 @@ input[type="range"] {
   transition: width 0.5s ease, background 0.5s ease;
 }
 
+.fixture.low-stock {
+  border-color: var(--accent-orange);
+  background: #fff7ed;
+}
+
+.fixture.is-restocking {
+  border-color: var(--primary);
+  background: #f0fff4;
+}
+
 .fixture-browsing {
   position: absolute;
   bottom: -13px;
