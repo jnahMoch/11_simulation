@@ -2,6 +2,8 @@
 
 A dual-mode **discrete-event simulation** of a 7-Eleven convenience store, available as both a **Python/SimPy backend** and a **live web dashboard** with an animated store floor.
 
+**Live Demo:** [https://seven-eleven-simulation.onrender.com](https://seven-eleven-simulation.onrender.com)
+
 ## Quick Start
 
 ### Backend (Python)
