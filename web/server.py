@@ -151,7 +151,7 @@ def number_param(params: dict[str, list[str]], name: str, default: float) -> flo
 
 def main() -> None:
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
-    server = ThreadingHTTPServer(("127.0.0.1", port), SimulationHandler)
+    server = ThreadingHTTPServer(("0.0.0.0", port), SimulationHandler)
     print(f"Serving dashboard at http://127.0.0.1:{port}/")
     server.serve_forever()
 
