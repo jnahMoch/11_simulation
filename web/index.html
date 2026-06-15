@@ -34,9 +34,9 @@
             <label>
               <div class="label-header">
                 <span>Avg Time Between Arrivals</span>
-                <span class="value" id="arrival-val">2.5m</span>
+                <span class="value" id="arrival-val">1.3m</span>
               </div>
-              <input id="arrival-rate" type="range" min="30" max="300" value="150" />
+               <input id="arrival-rate" type="range" min="30" max="300" value="150" />
             </label>
           </section>
 
@@ -59,22 +59,22 @@
 
             <div class="dual-row">
               <label>
-                <div class="label-header"><span>Service Min</span><span class="value" id="service-min-val">1.0m</span></div>
-                <input id="service-min-input" type="range" min="30" max="300" value="60" step="30" />
+                <div class="label-header">                <span>Service Min</span><span class="value" id="service-min-val">1.5m</span></div>
+                <input id="service-min-input" type="range" min="30" max="300" value="90" step="30" />
               </label>
               <label>
-                <div class="label-header"><span>Service Max</span><span class="value" id="service-max-val">5.0m</span></div>
-                <input id="service-max-input" type="range" min="60" max="600" value="300" step="30" />
+                <div class="label-header"><span>Service Max</span><span class="value" id="service-max-val">1.5m</span></div>
+                <input id="service-max-input" type="range" min="60" max="600" value="90" step="30" />
               </label>
             </div>
             <div class="dual-row">
               <label>
-                <div class="label-header"><span>Shop Min</span><span class="value" id="shop-min-val">1.0m</span></div>
-                <input id="shop-min-input" type="range" min="30" max="300" value="60" step="30" />
+                <div class="label-header">                <span>Shop Min</span><span class="value" id="shop-min-val">0.5m</span></div>
+                <input id="shop-min-input" type="range" min="30" max="300" value="30" step="30" />
               </label>
               <label>
-                <div class="label-header"><span>Shop Max</span><span class="value" id="shop-max-val">4.0m</span></div>
-                <input id="shop-max-input" type="range" min="60" max="900" value="240" step="30" />
+                <div class="label-header"><span>Shop Max</span><span class="value" id="shop-max-val">2.0m</span></div>
+                <input id="shop-max-input" type="range" min="60" max="900" value="120" step="30" />
               </label>
             </div>
           </section>
@@ -96,7 +96,7 @@
           <section class="control-group">
             <h3>RANDOM SEED</h3>
             <div class="seed-input-wrap">
-              <input type="text" value="42" id="seed-input" />
+              <input type="text" value="11" id="seed-input" />
               <button type="button" class="icon-button" id="randomize-seed">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78-7.78 5.5 5.5 0 0 1 7.78 7.78zM12 12l9 9m-9-9l-9 9m9-9l9-9"></path></svg>
               </button>
@@ -134,6 +134,14 @@
           </div>
           <div class="metric-divider"></div>
           <div class="metric-card">
+            <span class="label">CUSTOMERS INSIDE</span>
+            <div class="value-row">
+              <strong id="metric-inside">0</strong>
+              <small>UPSET <span id="metric-upset">0</span></small>
+            </div>
+          </div>
+          <div class="metric-divider"></div>
+          <div class="metric-card">
             <span class="label">UTILIZATION</span>
             <div class="value-row">
               <strong id="metric-util">0%</strong>
@@ -164,7 +172,8 @@
               <div class="speed-selector">
                 <button data-speed="1">1x</button>
                 <button class="active" data-speed="2">2x</button>
-                <button data-speed="6">6x</button>
+                <button data-speed="5">5x</button>
+                <button data-speed="10">10x</button>
                 <button data-speed="20">20x</button>
               </div>
             </div>
@@ -174,73 +183,261 @@
             </div>
           </div>
 
+          <!-- Status Panel (outside store floor) -->
+          <div class="status-panel" id="status-panel">
+            <div class="status-panel-section">
+              <div class="status-panel-title">STAFF STATUS</div>
+              <div class="status-panel-row">
+                <span class="sp-label">POS 1</span>
+                <span class="sp-value sp-green" id="sp-pos1">OPEN</span>
+              </div>
+              <div class="status-panel-row">
+                <span class="sp-label">POS 2</span>
+                <span class="sp-value sp-muted" id="sp-pos2">CLOSED</span>
+              </div>
+              <div class="status-panel-row">
+                <span class="sp-label">Staff 2</span>
+                <span class="sp-value" id="sp-staff2">IDLE</span>
+              </div>
+              <div class="status-panel-row sp-task-row" id="staff-2-task-row">
+                <span class="sp-label sp-task-label" id="staff-2-label">Task</span>
+                <span class="sp-value sp-task-value" id="staff-2-task">—</span>
+              </div>
+              <div class="status-panel-row">
+                <span class="sp-label">Staff 3</span>
+                <span class="sp-value sp-muted" id="sp-staff3">OFF DUTY</span>
+              </div>
+              <div class="status-panel-row sp-task-row" id="staff-3-task-row">
+                <span class="sp-label sp-task-label" id="staff-3-label">Task</span>
+                <span class="sp-value sp-task-value" id="staff-3-task">—</span>
+              </div>
+            </div>
+            <div class="status-panel-section">
+              <div class="status-panel-title">CUSTOMERS</div>
+              <div class="status-panel-row">
+                <span class="sp-label">Inside Store</span>
+                <span class="sp-value" id="sp-inside">0</span>
+              </div>
+              <div class="status-panel-row">
+                <span class="sp-label">Shopping</span>
+                <span class="sp-value" id="sp-shopping">0</span>
+              </div>
+              <div class="status-panel-row">
+                <span class="sp-label">In Queue</span>
+                <span class="sp-value" id="sp-queued">0</span>
+              </div>
+              <div class="status-panel-row">
+                <span class="sp-label">Upset</span>
+                <span class="sp-value sp-muted" id="sp-upset">0</span>
+              </div>
+            </div>
+            <div class="status-panel-section">
+              <div class="status-panel-title">PERFORMANCE</div>
+              <div class="status-panel-row">
+                <span class="sp-label">Avg Shop Time</span>
+                <span class="sp-value" id="sp-shop-time">0.0m</span>
+              </div>
+              <div class="status-panel-row">
+                <span class="sp-label">Revenue Est.</span>
+                <span class="sp-value" id="sp-revenue">₱0</span>
+              </div>
+              <div class="status-panel-row">
+                <span class="sp-label">Busy Hours</span>
+                <span class="sp-value" id="sp-busy-hours">0%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Legend outside store floor -->
+          <div class="viewport-legend" aria-label="Customer state legend">
+            <span class="vl-item"><i class="vl-dot green"></i>BROWSING</span>
+            <span class="vl-item"><i class="vl-dot yellow"></i>QUEUED</span>
+            <span class="vl-item"><i class="vl-dot red"></i>ANGRY</span>
+          </div>
+
           <div class="store-canvas-wrap">
             <div class="store-canvas" id="store-floor">
-              <!-- Indicators for entry/POS activity -->
-              <div class="schematic-entry">ENTRY</div>
+              <!-- Direction arrows showing customer flow -->
+              <div class="flow-arrow" id="flow-arrive" style="left: 58px; top: 200px;">
+                <span class="arrow-line"></span>
+                <span class="arrow-head">&#x25B6;</span>
+              </div>
+              <div class="flow-arrow flow-down" id="flow-to-shelf" style="left: 120px; top: 140px;">
+                <span class="arrow-line"></span>
+                <span class="arrow-head">&#x25BC;</span>
+              </div>
+              <!-- Shared queue lane between counters -->
+              <div class="queue-lane" id="queue-lane-shared">
+                <div class="queue-lane-header">&#x23F3; WAITING LINE</div>
+                <div class="queue-lane-entries" id="ql-entries"></div>
+                <div class="queue-lane-footer">
+                  <span class="ql-label">Queue:</span>
+                  <span class="ql-count" id="ql-count">0</span>
+                  <span class="ql-arrow">&#x25B2;</span>
+                </div>
+              </div>
+
+              <!-- Flow arrow from queue area toward POS counters -->
+              <div class="flow-arrow" id="flow-to-pos" style="left: 690px; top: 230px;">
+                <span class="arrow-line"></span>
+                <span class="arrow-head">&#x25B6;</span>
+              </div>
+
+              <!-- Flow arrow from POS area down to exit -->
+              <div class="flow-arrow flow-down" id="flow-to-exit" style="right: 100px; bottom: 52px;">
+                <span class="arrow-line"></span>
+                <span class="arrow-head">&#x25BC;</span>
+              </div>
+
+              <!-- Exit point below queue -->
+              <div class="schematic-exit" id="schematic-exit">
+                <div class="exit-arrow">&#x21B4;</div>
+                <span class="exit-text">EXIT</span>
+                <div class="exit-icon">&#x1F6AA;</div>
+              </div>
+
+              <!-- Entry point -->
+              <div class="schematic-entry">
+                <div class="entry-icon">&#x1F6AA;</div>
+                <span class="entry-text">ENTRY</span>
+                <div class="entry-arrow">&#x2193;</div>
+              </div>
 
               <div class="store-fixtures shelf-row" aria-hidden="true">
                 <div class="fixture shelf-fixture" data-area="shelf-snacks">
+                  <div class="fixture-top-bar"></div>
                   <span class="fixture-type">SHELF</span>
                   <strong>SNACKS</strong>
+                  <span class="fixture-stock-pct">0%</span>
+                  <div class="fixture-stock-track"><div class="fixture-stock-bar" style="width:0%"></div></div>
+                  <span class="fixture-browsing" id="browse-shelf-snacks"></span>
                 </div>
                 <div class="fixture shelf-fixture" data-area="shelf-drinks">
+                  <div class="fixture-top-bar"></div>
                   <span class="fixture-type">SHELF</span>
                   <strong>DRINKS</strong>
+                  <span class="fixture-stock-pct">0%</span>
+                  <div class="fixture-stock-track"><div class="fixture-stock-bar" style="width:0%"></div></div>
+                  <span class="fixture-browsing" id="browse-shelf-drinks"></span>
                 </div>
                 <div class="fixture shelf-fixture" data-area="shelf-instant">
+                  <div class="fixture-top-bar"></div>
                   <span class="fixture-type">SHELF</span>
                   <strong>INSTANT</strong>
+                  <span class="fixture-stock-pct">0%</span>
+                  <div class="fixture-stock-track"><div class="fixture-stock-bar" style="width:0%"></div></div>
+                  <span class="fixture-browsing" id="browse-shelf-instant"></span>
                 </div>
                 <div class="fixture shelf-fixture" data-area="shelf-candy">
+                  <div class="fixture-top-bar"></div>
                   <span class="fixture-type">SHELF</span>
                   <strong>CANDY</strong>
+                  <span class="fixture-stock-pct">0%</span>
+                  <div class="fixture-stock-track"><div class="fixture-stock-bar" style="width:0%"></div></div>
+                  <span class="fixture-browsing" id="browse-shelf-candy"></span>
                 </div>
                 <div class="fixture shelf-fixture" data-area="shelf-bakery">
+                  <div class="fixture-top-bar"></div>
                   <span class="fixture-type">SHELF</span>
                   <strong>BAKERY</strong>
+                  <span class="fixture-stock-pct">0%</span>
+                  <div class="fixture-stock-track"><div class="fixture-stock-bar" style="width:0%"></div></div>
+                  <span class="fixture-browsing" id="browse-shelf-bakery"></span>
                 </div>
               </div>
 
               <div class="store-fixtures fridge-row" aria-hidden="true">
                 <div class="fixture fridge-fixture" data-area="fridge-beverage">
+                  <div class="fixture-top-bar"></div>
                   <span class="fixture-type">FRIDGE</span>
                   <strong>BEVERAGE</strong>
+                  <span class="fixture-stock-pct">0%</span>
+                  <div class="fixture-stock-track"><div class="fixture-stock-bar" style="width:0%"></div></div>
+                  <span class="fixture-browsing" id="browse-fridge-beverage"></span>
                 </div>
                 <div class="fixture fridge-fixture" data-area="fridge-dairy">
+                  <div class="fixture-top-bar"></div>
                   <span class="fixture-type">FRIDGE</span>
                   <strong>DAIRY</strong>
+                  <span class="fixture-stock-pct">0%</span>
+                  <div class="fixture-stock-track"><div class="fixture-stock-bar" style="width:0%"></div></div>
+                  <span class="fixture-browsing" id="browse-fridge-dairy"></span>
                 </div>
                 <div class="fixture fridge-fixture" data-area="fridge-frozen">
+                  <div class="fixture-top-bar"></div>
                   <span class="fixture-type">FRIDGE</span>
                   <strong>FROZEN</strong>
+                  <span class="fixture-stock-pct">0%</span>
+                  <div class="fixture-stock-track"><div class="fixture-stock-bar" style="width:0%"></div></div>
+                  <span class="fixture-browsing" id="browse-fridge-frozen"></span>
                 </div>
                 <div class="fixture fridge-fixture" data-area="fridge-beer">
+                  <div class="fixture-top-bar"></div>
                   <span class="fixture-type">FRIDGE</span>
                   <strong>BEER</strong>
+                  <span class="fixture-stock-pct">0%</span>
+                  <div class="fixture-stock-track"><div class="fixture-stock-bar" style="width:0%"></div></div>
+                  <span class="fixture-browsing" id="browse-fridge-beer"></span>
                 </div>
               </div>
-              
-              <div class="station-rack" id="station-rack">
-                <div class="station open" id="station-1">
-                  <span class="name">POS 01</span>
-                  <span class="status">OPEN</span>
+
+              <!-- Cashier counter area -->
+              <div class="counter-area" id="counter-area">
+                <!-- POS 01 Counter Desk -->
+                <div class="counter-desk open" id="counter-1">
+                  <div class="counter-body">
+                    <div class="counter-top"></div>
+                    <div class="counter-content">
+                      <div class="counter-icon-area">
+                        <span class="counter-register-icon">&#x1F9FE;</span>
+                        <span class="counter-staff-icon">&#x1F9D1;&#x200D;</span>
+                      </div>
+                      <div class="counter-info">
+                        <span class="counter-name">POS 01</span>
+                        <div class="counter-status-row">
+                          <span class="counter-status-dot"></span>
+                          <span class="counter-status-text">OPEN</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="current-customer" id="now-serving-1">
+                      <span class="cc-dot"></span>
+                      <span class="cc-id" id="cc-id-1"></span>
+                      <span class="cc-service-time" id="cc-time-1"></span>
+                    </div>
+                  </div>
                 </div>
-                <div class="station closed" id="station-2">
-                  <span class="name">POS 02</span>
-                  <span class="status">CLOSED</span>
+
+                <!-- POS 02 Counter Desk -->
+                <div class="counter-desk closed" id="counter-2">
+                  <div class="counter-body">
+                    <div class="counter-top"></div>
+                    <div class="counter-content">
+                      <div class="counter-icon-area">
+                        <span class="counter-register-icon">&#x1F9FE;</span>
+                        <span class="counter-staff-icon">&#x1F9D1;&#x200D;</span>
+                      </div>
+                      <div class="counter-info">
+                        <span class="counter-name">POS 02</span>
+                        <div class="counter-status-row">
+                          <span class="counter-status-dot"></span>
+                          <span class="counter-status-text">CLOSED</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="current-customer" id="now-serving-2">
+                      <span class="cc-dot"></span>
+                      <span class="cc-id" id="cc-id-2"></span>
+                      <span class="cc-service-time" id="cc-time-2"></span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div id="customers-layer" class="customers-layer"></div>
-
-              <div class="customer-state-legend" aria-label="Customer state legend">
-                <span><i class="legend-customer normal"></i>NORMAL CUSTOMER</span>
-                <span><i class="legend-customer angry"></i>ANGRY CUSTOMER</span>
-              </div>
               
               <footer class="schematic-footer">
-                STORE FLOOR - TOP-DOWN SCHEMATIC
+                &#x24D2; 7-ELEVEN SIMULATION v5.0
               </footer>
             </div>
           </div>
