@@ -646,6 +646,7 @@ function resetSimulation() {
   state.lastChartUpdate = 0;
   state.staff2 = { taskIndex: 0, busyUntil: 0, task: null, pausedForPos2: false };
   state.staff3 = { taskIndex: 0, busyUntil: 0, task: null };
+  state.staffAvatars = null; // Clear dynamically created avatars
   state.utilityWorkload = { "Staff 2": 0, "Staff 3": 0 };
   state.nextUtilityCheck = 1200;
   
@@ -1248,46 +1249,133 @@ function renderThroughputChart() {
   renderStaffMetricChart(throughputCanvas, throughputCtx, "throughput", "#ff4b33", "Throughput (cust/min)", 3);
 }
 
-function processUtilityStaff() {
+function getStaffAvatar(staffId) {
+  if (!state.staffAvatars) state.staffAvatars = {};
+  if (!state.staffAvatars[staffId]) {
+    const el = document.createElement("div");
+    el.className = "staff-avatar";
+    el.innerHTML = personSVG("shopping");
+    el.style.color = staffId === "Staff 2" ? "#3182ce" : "#ed8936";
+    customersLayer.appendChild(el);
+    const label = document.createElement("div");
+    label.className = "customer-label";
+    label.textContent = staffId;
+    customersLayer.appendChild(label);
+    state.staffAvatars[staffId] = { el, label, restockTarget: null, badgeEl: null, x: 0, y: 0 };
+  }
+  return state.staffAvatars[staffId];
+}
+
+function updateStaffAvatarPos(avatar, point) {
+  avatar.x = point.x;
+  avatar.y = point.y;
+  const xPct = (point.x / VIEWPORT_WIDTH) * 100;
+  const yPct = (point.y / VIEWPORT_HEIGHT) * 100;
+  avatar.el.style.left = `${xPct}%`;
+  avatar.el.style.top = `${yPct}%`;
+  avatar.label.style.left = `${xPct}%`;
+  avatar.label.style.top = `${yPct + 1.4}%`;
+}
+
+function removeStaffBadge(avatar) {
+  if (avatar.badgeEl) {
+    avatar.badgeEl.remove();
+    avatar.badgeEl = null;
+  }
+}
+
+function processUtilityStaff(delta) {
   if (state.backendResultsActive) return;
 
-  // Staff 2: check pause/resume condition every tick when POS-2 status changes
   const isPos2Open = state.pos[1] && state.pos[1].open;
+
+  // Ensure avatars exist
+  const s2 = getStaffAvatar("Staff 2");
+  const s3 = getStaffAvatar("Staff 3");
 
   if (isPos2Open && !state.staff2.pausedForPos2) {
     state.staff2.pausedForPos2 = true;
+    if (s2.restockTarget) {
+      s2.restockTarget.restockingBy = null;
+      s2.restockTarget = null;
+      removeStaffBadge(s2);
+    }
+    state.staff2.task = null;
     addEventLog("Staff 2: Pauses utility work while operating POS 2");
+    updateStaffAvatarPos(s2, { x: points.station2.x + 30, y: points.station2.y });
   }
 
   if (!isPos2Open && state.staff2.pausedForPos2) {
     state.staff2.pausedForPos2 = false;
     addEventLog("Staff 2: Resumes utility work after POS 2 closes");
+    updateStaffAvatarPos(s2, { x: points.station2.x + 40, y: points.station2.y - 40 });
   }
 
-  // Start new utility tasks on interval
-  if (state.time >= state.nextUtilityCheck) {
-    if (!isPos2Open && state.time >= state.staff2.busyUntil) {
-      const taskName = UTILITY_TASKS[state.staff2.taskIndex % UTILITY_TASKS.length];
-      state.staff2.taskIndex++;
-      state.staff2.task = taskName;
-      state.staff2.busyUntil = state.time + UTILITY_DURATION;
-      state.utilityWorkload["Staff 2"] += UTILITY_DURATION;
-      addEventLog(`Staff 2: Starts ${taskName}`);
-      schedule(UTILITY_DURATION, "utility-staff2-complete");
-    }
+  // Dynamic Restocking Logic
+  const depletedAreas = shoppingAreas.filter(a => a.stock <= 50 && !a.restockingBy);
+  if (depletedAreas.length > 0) {
+    const targetArea = depletedAreas.sort((a,b) => a.stock - b.stock)[0];
+    
+    // Check if Staff 3 is available
+    const onNightShift = isNightShift(state.time);
+    const s3Available = onNightShift && !s3.restockTarget;
+    const s2Available = !isPos2Open && !s2.restockTarget;
 
-    // Staff 3: night shift only (6PM - 2AM)
-    if (isNightShift(state.time) && state.time >= state.staff3.busyUntil) {
-      const taskName = UTILITY_TASKS[state.staff3.taskIndex % UTILITY_TASKS.length];
-      state.staff3.taskIndex++;
-      state.staff3.task = taskName;
-      state.staff3.busyUntil = state.time + UTILITY_DURATION;
-      state.utilityWorkload["Staff 3"] += UTILITY_DURATION;
-      addEventLog(`Staff 3: Starts ${taskName}`);
-      schedule(UTILITY_DURATION, "utility-staff3-complete");
-    }
+    let assignedStaffId = null;
+    if (s3Available) assignedStaffId = "Staff 3";
+    else if (s2Available) assignedStaffId = "Staff 2";
 
-    state.nextUtilityCheck = state.time + UTILITY_INTERVAL;
+    if (assignedStaffId) {
+      targetArea.restockingBy = assignedStaffId;
+      const avatar = assignedStaffId === "Staff 3" ? s3 : s2;
+      avatar.restockTarget = targetArea;
+      state[assignedStaffId === "Staff 3" ? "staff3" : "staff2"].task = `Restock ${targetArea.label}`;
+      addEventLog(`${assignedStaffId}: Starts restocking ${targetArea.label}`);
+      updateStaffAvatarPos(avatar, points[targetArea.key]);
+      
+      const badge = document.createElement("div");
+      badge.className = "restocking-badge";
+      badge.textContent = "RESTOCKING";
+      const domKey = targetArea.key.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
+      const fixture = document.querySelector(`.fixture[data-area="${domKey}"]`);
+      if (fixture) fixture.appendChild(badge);
+      avatar.badgeEl = badge;
+    }
+  }
+
+  // Process Active Restocks
+  ["Staff 2", "Staff 3"].forEach(staffId => {
+    const avatar = staffId === "Staff 2" ? s2 : s3;
+    if (avatar.restockTarget) {
+      const area = avatar.restockTarget;
+      // Replenish stock gradually
+      area.stock = Math.min(100, area.stock + (delta * state.speed * 2)); // Restock rate
+      if (area.stock >= 100) {
+        addEventLog(`${staffId}: Finished restocking ${area.label}`);
+        area.restockingBy = null;
+        avatar.restockTarget = null;
+        removeStaffBadge(avatar);
+        state[staffId === "Staff 3" ? "staff3" : "staff2"].task = "Idle";
+        // Move to idle pos
+        if (staffId === "Staff 2") updateStaffAvatarPos(s2, { x: points.station2.x + 40, y: points.station2.y - 40 });
+        else updateStaffAvatarPos(s3, { x: points.station1.x + 40, y: points.station1.y - 40 });
+      }
+    }
+  });
+
+  // Basic idle positioning if not doing anything
+  if (!onNightShift) {
+     s3.el.style.display = "none";
+     s3.label.style.display = "none";
+     if (s3.restockTarget) { s3.restockTarget.restockingBy = null; s3.restockTarget = null; removeStaffBadge(s3); }
+  } else {
+     s3.el.style.display = "";
+     s3.label.style.display = "";
+     if (!s3.restockTarget) updateStaffAvatarPos(s3, { x: points.station1.x + 40, y: points.station1.y - 40 });
+  }
+
+  if (!isPos2Open && !s2.restockTarget) {
+     updateStaffAvatarPos(s2, { x: points.station2.x + 40, y: points.station2.y - 40 });
   }
 
   updateStaffUI();
@@ -1450,7 +1538,7 @@ function tick(now) {
       updatePlaybackControls();
     }
     processEvents();
-    processUtilityStaff();
+    processUtilityStaff(delta);
     updateMetrics();
   }
   requestAnimationFrame(tick);
