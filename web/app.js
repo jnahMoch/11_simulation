@@ -848,6 +848,14 @@ function handleFinishShopping({ id }) {
   const area = customer.shoppingArea;
   area.stock = Math.max(0, area.stock - 1);
   addEventLog(`Customer ${id}: Picks item from ${area.type} ${area.label} at time ${state.time.toFixed(2)}`);
+  const s2 = getStaffAvatar("Staff 2");
+  const s3 = getStaffAvatar("Staff 3");
+  assignCriticalRestocks({
+    isPos2Open: state.pos[1] && state.pos[1].open,
+    onNightShift: isNightShift(state.time),
+    s2,
+    s3,
+  });
   handleJoinQueue({ id });
 }
 
@@ -1303,10 +1311,17 @@ function availableRestockers({ isPos2Open, onNightShift, s2, s3 }) {
     : [];
 }
 
+function staffStateFor(staffId) {
+  return state[staffId === "Staff 3" ? "staff3" : "staff2"];
+}
+
 function assignRestock(staff, targetArea) {
   targetArea.restockingBy = staff.id;
   staff.avatar.restockTarget = targetArea;
-  const staffState = state[staff.id === "Staff 3" ? "staff3" : "staff2"];
+  const staffState = staffStateFor(staff.id);
+  if (staffState.task && !staffState.task.startsWith("Restock")) {
+    addEventLog(`${staff.id}: Pauses ${staffState.task} for critical restock`);
+  }
   staffState.task = `Restock ${targetArea.label}`;
   staffState.busyUntil = Number.POSITIVE_INFINITY;
   addEventLog(`${staff.id}: Starts restocking ${targetArea.label}`);
@@ -1319,6 +1334,18 @@ function assignRestock(staff, targetArea) {
   const fixture = document.querySelector(`.fixture[data-area="${domKey}"]`);
   if (fixture) fixture.appendChild(badge);
   staff.avatar.badgeEl = badge;
+}
+
+function assignCriticalRestocks({ isPos2Open, onNightShift, s2, s3 }) {
+  const depletedAreas = depletedShoppingAreas();
+  if (!depletedAreas.length) return;
+
+  const restockers = availableRestockers({ isPos2Open, onNightShift, s2, s3 });
+  restockers.forEach((staff, index) => {
+    const targetArea = depletedAreas[index];
+    if (!targetArea) return;
+    assignRestock(staff, targetArea);
+  });
 }
 
 function processUtilityStaff(delta) {
@@ -1348,14 +1375,7 @@ function processUtilityStaff(delta) {
   }
 
   const onNightShift = isNightShift(state.time);
-
-  const depletedAreas = depletedShoppingAreas();
-  const restockers = availableRestockers({ isPos2Open, onNightShift, s2, s3 });
-  restockers.forEach((staff, index) => {
-    const targetArea = depletedAreas[index];
-    if (!targetArea) return;
-    assignRestock(staff, targetArea);
-  });
+  assignCriticalRestocks({ isPos2Open, onNightShift, s2, s3 });
 
   // Process Active Restocks
   ["Staff 2", "Staff 3"].forEach(staffId => {
@@ -1369,8 +1389,8 @@ function processUtilityStaff(delta) {
         area.restockingBy = null;
         avatar.restockTarget = null;
         removeStaffBadge(avatar);
-        state[staffId === "Staff 3" ? "staff3" : "staff2"].task = "Idle";
-        state[staffId === "Staff 3" ? "staff3" : "staff2"].busyUntil = state.time;
+        staffStateFor(staffId).task = "Idle";
+        staffStateFor(staffId).busyUntil = state.time;
         // Move to idle pos
         if (staffId === "Staff 2") updateStaffAvatarPos(s2, { x: points.station2.x + 40, y: points.station2.y - 40 });
         else updateStaffAvatarPos(s3, { x: points.station1.x + 40, y: points.station1.y - 40 });
