@@ -1285,8 +1285,6 @@ function removeStaffBadge(avatar) {
 }
 
 function processUtilityStaff(delta) {
-  if (state.backendResultsActive) return;
-
   const isPos2Open = state.pos[1] && state.pos[1].open;
 
   // Ensure avatars exist
