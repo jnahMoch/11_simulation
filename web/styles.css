@@ -286,6 +286,11 @@ input[type="range"] {
   height: 100%;
 }
 
+.staff-avatar,
+.staff-label {
+  display: none;
+}
+
 
 .toggle.active::before {
   transform: translateX(14px);

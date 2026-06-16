@@ -1267,7 +1267,7 @@ function getStaffAvatar(staffId) {
     el.style.color = staffId === "Staff 2" ? "#3182ce" : "#ed8936";
     customersLayer.appendChild(el);
     const label = document.createElement("div");
-    label.className = "customer-label";
+    label.className = "customer-label staff-label";
     label.textContent = staffId;
     customersLayer.appendChild(label);
     state.staffAvatars[staffId] = { el, label, restockTarget: null, badgeEl: null, x: 0, y: 0 };
