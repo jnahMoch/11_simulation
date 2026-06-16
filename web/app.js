@@ -464,7 +464,7 @@ function updatePlaybackControls() {
   playBtn.setAttribute("aria-pressed", String(state.running));
   playBtn.classList.toggle("is-running", state.running);
 
-  toggleButton.innerHTML = `${runLabel} <span aria-hidden="true">${state.running ? "II" : "+"}</span>`;
+  toggleButton.innerHTML = `${runLabel} <span aria-hidden="true">${state.running ? "II" : "&#9654;"}</span>`;
   toggleButton.classList.toggle("is-running", state.running);
 }
 
